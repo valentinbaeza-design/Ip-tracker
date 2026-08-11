@@ -5,11 +5,12 @@ const TG_CHAT = process.env.TELEGRAM_CHAT_ID;
 
 const POSITION_MANAGER_BASE = "0x03a520b32C04BF3bEEf7BEb72E919cf822Ed34f1";
 const POSITION_MANAGER_ARB = "0xC36442b4a4522E871399CD717aBDD847Ab11FE88";
-const FACTORY = "0x1F98431c8aD98523631AE4a59f267346ea31F984"; // misma dirección en Base y Arbitrum
+const FACTORY_BASE = "0x33128a8fC17869897dcE68Ed026d694621f6FDfD";
+const FACTORY_ARB = "0x1F98431c8aD98523631AE4a59f267346ea31F984";
 
 const POSITIONS = [
-  { label: "WETH/USDC · Base", tokenId: 5759912, rpc: "https://mainnet.base.org", pm: POSITION_MANAGER_BASE },
-  { label: "WETH/ARB · Arbitrum", tokenId: 5642782, rpc: "https://arb1.arbitrum.io/rpc", pm: POSITION_MANAGER_ARB }
+  { label: "WETH/USDC · Base", tokenId: 5759912, rpc: "https://mainnet.base.org", pm: POSITION_MANAGER_BASE, factory: FACTORY_BASE },
+  { label: "WETH/ARB · Arbitrum", tokenId: 5642782, rpc: "https://arb1.arbitrum.io/rpc", pm: POSITION_MANAGER_ARB, factory: FACTORY_ARB }
 ];
 
 const PM_ABI = [
@@ -27,7 +28,6 @@ const ERC20_ABI = [
 ];
 
 function tickToPrice(tick, dec0, dec1) {
-  // precio de token1 en unidades de token0, ajustado a decimales humanos
   const raw = Math.pow(1.0001, tick);
   return raw * Math.pow(10, dec0 - dec1);
 }
@@ -35,7 +35,7 @@ function tickToPrice(tick, dec0, dec1) {
 async function checkPosition(cfg) {
   const provider = new ethers.JsonRpcProvider(cfg.rpc);
   const pm = new ethers.Contract(cfg.pm, PM_ABI, provider);
-  const factory = new ethers.Contract(FACTORY, FACTORY_ABI, provider);
+  const factory = new ethers.Contract(cfg.factory, FACTORY_ABI, provider);
 
   const pos = await pm.positions(cfg.tokenId);
   const poolAddr = await factory.getPool(pos.token0, pos.token1, pos.fee);
@@ -53,7 +53,6 @@ async function checkPosition(cfg) {
   const tickUpper = Number(pos.tickUpper);
   const inRange = currentTick >= tickLower && currentTick < tickUpper;
 
-  // precio actual y límites, expresados como token1 por token0
   const priceNow = tickToPrice(currentTick, Number(dec0), Number(dec1));
   const priceMin = tickToPrice(tickLower, Number(dec0), Number(dec1));
   const priceMax = tickToPrice(tickUpper, Number(dec0), Number(dec1));
