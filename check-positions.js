@@ -33,7 +33,7 @@ function tickToPrice(tick, dec0, dec1) {
 }
 
 async function checkPosition(cfg) {
-  const provider = new ethers.JsonRpcProvider(cfg.rpc);
+  const provider = new ethers.JsonRpcProvider(cfg.rpc, undefined, { batchMaxCount: 1 });
   const pm = new ethers.Contract(cfg.pm, PM_ABI, provider);
   const factory = new ethers.Contract(cfg.factory, FACTORY_ABI, provider);
 
