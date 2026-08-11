@@ -1,40 +1,60 @@
 import { ethers } from "ethers";
+import fs from "fs";
 
 const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TG_CHAT = process.env.TELEGRAM_CHAT_ID;
+const WALLET = process.env.WALLET_ADDRESS;
 
-const POSITION_MANAGER_BASE = "0x03a520b32C04BF3bEEf7BEb72E919cf822Ed34f1";
-const POSITION_MANAGER_ARB = "0xC36442b4a4522E871399CD717aBDD847Ab11FE88";
-const FACTORY_BASE = "0x33128a8fC17869897dcE68Ed026d694621f6FDfD";
-const FACTORY_ARB = "0x1F98431c8aD98523631AE4a59f267346ea31F984";
-
-const POSITIONS = [
-  { label: "WETH/USDC · Base", tokenId: 5759912, rpc: "https://mainnet.base.org", pm: POSITION_MANAGER_BASE, factory: FACTORY_BASE },
-  { label: "WETH/ARB · Arbitrum", tokenId: 5642782, rpc: "https://arb1.arbitrum.io/rpc", pm: POSITION_MANAGER_ARB, factory: FACTORY_ARB }
-];
+const config = JSON.parse(fs.readFileSync(new URL("./config.json", import.meta.url)));
+const POSITIONS = config.positions;
 
 const PM_ABI = [
-  "function positions(uint256 tokenId) view returns (uint96 nonce, address operator, address token0, address token1, uint24 fee, int24 tickLower, int24 tickUpper, uint128 liquidity, uint256 feeGrowthInside0LastX128, uint256 feeGrowthInside1LastX128, uint128 tokensOwed0, uint128 tokensOwed1)"
+  "function positions(uint256 tokenId) view returns (uint96 nonce, address operator, address token0, address token1, uint24 fee, int24 tickLower, int24 tickUpper, uint128 liquidity, uint256 feeGrowthInside0LastX128, uint256 feeGrowthInside1LastX128, uint128 tokensOwed0, uint128 tokensOwed1)",
+  "function collect((uint256 tokenId, address recipient, uint128 amount0Max, uint128 amount1Max) params) returns (uint256 amount0, uint256 amount1)"
 ];
-const FACTORY_ABI = [
-  "function getPool(address tokenA, address tokenB, uint24 fee) view returns (address pool)"
-];
-const POOL_ABI = [
-  "function slot0() view returns (uint160 sqrtPriceX96, int24 tick, uint16, uint16, uint16, uint8, bool)"
-];
-const ERC20_ABI = [
-  "function symbol() view returns (string)",
-  "function decimals() view returns (uint8)"
-];
+const FACTORY_ABI = ["function getPool(address tokenA, address tokenB, uint24 fee) view returns (address pool)"];
+const POOL_ABI = ["function slot0() view returns (uint160 sqrtPriceX96, int24 tick, uint16, uint16, uint16, uint8, bool)"];
+const ERC20_ABI = ["function symbol() view returns (string)", "function decimals() view returns (uint8)"];
+
+const MAX_UINT128 = (2n ** 128n) - 1n;
 
 function tickToPrice(tick, dec0, dec1) {
-  const raw = Math.pow(1.0001, tick);
-  return raw * Math.pow(10, dec0 - dec1);
+  return Math.pow(1.0001, tick) * Math.pow(10, dec0 - dec1);
+}
+function tickToSqrtPrice(tick) {
+  return Math.sqrt(Math.pow(1.0001, tick));
+}
+function getAmountsForLiquidity(liquidity, sqrtP, sqrtA, sqrtB) {
+  let amount0 = 0, amount1 = 0;
+  if (sqrtP <= sqrtA) {
+    amount0 = liquidity * (1 / sqrtA - 1 / sqrtB);
+  } else if (sqrtP >= sqrtB) {
+    amount1 = liquidity * (sqrtB - sqrtA);
+  } else {
+    amount0 = liquidity * (1 / sqrtP - 1 / sqrtB);
+    amount1 = liquidity * (sqrtP - sqrtA);
+  }
+  return { amount0, amount1 };
+}
+
+async function getUsdPrices(symbols) {
+  const map = { WETH: "ethereum", ETH: "ethereum", USDC: "usd-coin", ARB: "arbitrum" };
+  const ids = [...new Set(symbols.map(s => map[s]).filter(Boolean))];
+  try {
+    const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids.join(",")}&vs_currencies=usd`);
+    const data = await res.json();
+    const out = {};
+    for (const s of symbols) out[s] = map[s] && data[map[s]] ? data[map[s]].usd : null;
+    return out;
+  } catch (e) {
+    console.error("Error obteniendo precios USD:", e.message);
+    return {};
+  }
 }
 
 async function checkPosition(cfg) {
   const provider = new ethers.JsonRpcProvider(cfg.rpc, undefined, { batchMaxCount: 1 });
-  const pm = new ethers.Contract(cfg.pm, PM_ABI, provider);
+  const pm = new ethers.Contract(cfg.positionManager, PM_ABI, provider);
   const factory = new ethers.Contract(cfg.factory, FACTORY_ABI, provider);
 
   const pos = await pm.positions(cfg.tokenId);
@@ -47,66 +67,116 @@ async function checkPosition(cfg) {
   const [sym0, dec0, sym1, dec1] = await Promise.all([
     token0.symbol(), token0.decimals(), token1.symbol(), token1.decimals()
   ]);
+  const d0 = Number(dec0), d1 = Number(dec1);
 
   const currentTick = Number(slot0.tick);
   const tickLower = Number(pos.tickLower);
   const tickUpper = Number(pos.tickUpper);
   const inRange = currentTick >= tickLower && currentTick < tickUpper;
 
-  const priceNow = tickToPrice(currentTick, Number(dec0), Number(dec1));
-  const priceMin = tickToPrice(tickLower, Number(dec0), Number(dec1));
-  const priceMax = tickToPrice(tickUpper, Number(dec0), Number(dec1));
-
+  const priceNow = tickToPrice(currentTick, d0, d1);
+  const priceMin = tickToPrice(tickLower, d0, d1);
+  const priceMax = tickToPrice(tickUpper, d0, d1);
   const rangeWidth = priceMax - priceMin;
   const distToLower = ((priceNow - priceMin) / rangeWidth * 100).toFixed(1);
   const distToUpper = ((priceMax - priceNow) / rangeWidth * 100).toFixed(1);
 
+  // Cantidades actuales en la posición (matemática estándar Uniswap V3)
+  const sqrtP = Number(slot0.sqrtPriceX96) / 2 ** 96;
+  const sqrtA = tickToSqrtPrice(tickLower);
+  const sqrtB = tickToSqrtPrice(tickUpper);
+  const liquidity = Number(pos.liquidity);
+  const { amount0, amount1 } = getAmountsForLiquidity(liquidity, sqrtP, sqrtA, sqrtB);
+  const amount0Human = amount0 / 10 ** d0;
+  const amount1Human = amount1 / 10 ** d1;
+
+  // Fees reales acumuladas (simulación de collect, sin gastar gas ni mover fondos)
+  let fee0Human = 0, fee1Human = 0;
+  try {
+    const [fee0, fee1] = await pm.collect.staticCall(
+      { tokenId: cfg.tokenId, recipient: WALLET, amount0Max: MAX_UINT128, amount1Max: MAX_UINT128 },
+      { from: WALLET }
+    );
+    fee0Human = Number(fee0) / 10 ** d0;
+    fee1Human = Number(fee1) / 10 ** d1;
+  } catch (e) {
+    console.error(`No se pudieron leer fees de ${cfg.label}:`, e.message);
+  }
+
   return {
-    label: cfg.label,
-    inRange,
-    pairLabel: `${sym1}/${sym0}`,
-    priceNow: priceNow.toFixed(4),
-    priceMin: priceMin.toFixed(4),
-    priceMax: priceMax.toFixed(4),
-    distToLower,
-    distToUpper
+    label: cfg.label, inRange, sym0, sym1, priceNow, priceMin, priceMax,
+    distToLower, distToUpper, amount0Human, amount1Human, fee0Human, fee1Human,
+    initialUSD: cfg.initialUSD
   };
 }
 
+function buildSuggestion(r) {
+  const msgs = [];
+  if (!r.inRange) msgs.push("Fuera de rango: no genera fees ahora mismo. Valora reequilibrar el rango o esperar a que el precio vuelva.");
+  else if (parseFloat(r.distToLower) < 10 || parseFloat(r.distToUpper) < 10) msgs.push("Cerca del límite del rango (<10% de margen). Vigila, podría salir pronto.");
+  if (r.totalReturnPct !== null && r.totalReturnPct < 0) msgs.push("Rendimiento negativo desde el depósito (las fees aún no compensan el movimiento de precio).");
+  if (msgs.length === 0) msgs.push("Sin acción necesaria, todo dentro de parámetros normales.");
+  return msgs.join(" ");
+}
+
 function buildMessage(results) {
+  const now = new Date().toLocaleString("es-ES", { timeZone: "Europe/Madrid" });
   const lines = results.map(r => {
+    if (r.error) return `⚠️ *${r.label}*\nError leyendo datos: ${r.error}`;
     const icon = r.inRange ? "🟢" : "🔴";
     const status = r.inRange ? "dentro de rango" : "FUERA DE RANGO";
-    return `${icon} *${r.label}*\n${status} — ${r.pairLabel}: ${r.priceNow}\nRango: ${r.priceMin} – ${r.priceMax}\nMargen: ${r.distToLower}% desde el mínimo, ${r.distToUpper}% hasta el máximo`;
+    const valueLine = r.positionValueUSD !== null
+      ? `Valor actual: $${r.positionValueUSD.toFixed(2)} · Fees ganadas: $${r.feesValueUSD.toFixed(2)}\nRendimiento total: ${r.totalReturnPct.toFixed(1)}%`
+      : `Fees ganadas: ${r.fee0Human.toFixed(6)} ${r.sym0} + ${r.fee1Human.toFixed(6)} ${r.sym1} (sin precio USD disponible)`;
+    const ilLine = r.ilPct !== null ? `IL aprox. vs entrada: ${r.ilPct.toFixed(2)}% · vs hold 50/50: ${r.vsHoldUSD >= 0 ? "+" : ""}$${r.vsHoldUSD.toFixed(2)}` : "";
+    return `${icon} *${r.label}*\n${status} — ${r.sym1}/${r.sym0}: ${r.priceNow.toFixed(4)}\nMargen: ${r.distToLower}% / ${r.distToUpper}%\n${valueLine}\n${ilLine}\n👉 ${r.suggestion}`;
   });
-  const now = new Date().toLocaleString("es-ES", { timeZone: "Europe/Madrid" });
-  return `📊 *Estado de posiciones LP* — ${now}\n\n` + lines.join("\n\n");
+  return `📊 *Estado de posiciones LP* — ${now}\n\n` + lines.join("\n\n") + `\n\n_IL y comparativa vs hold son aproximados (sin precio de entrada exacto registrado)._`;
 }
 
 async function sendTelegram(text) {
-  const url = `https://api.telegram.org/bot${TG_TOKEN}/sendMessage`;
-  const res = await fetch(url, {
+  const res = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ chat_id: TG_CHAT, text, parse_mode: "Markdown" })
   });
-  if (!res.ok) {
-    console.error("Error enviando a Telegram:", await res.text());
-  }
+  if (!res.ok) console.error("Error enviando a Telegram:", await res.text());
 }
 
 async function main() {
-  const results = [];
+  const raw = [];
   for (const cfg of POSITIONS) {
     try {
-      const r = await checkPosition(cfg);
-      results.push(r);
-      console.log(r);
+      raw.push(await checkPosition(cfg));
     } catch (e) {
       console.error(`Error en ${cfg.label}:`, e.message);
-      results.push({ label: cfg.label, inRange: null, pairLabel: "?", priceNow: "?", priceMin: "?", priceMax: "?", distToLower: "?", distToUpper: "?" });
+      raw.push({ label: cfg.label, error: e.message });
     }
   }
+
+  const symbols = [...new Set(raw.filter(r => !r.error).flatMap(r => [r.sym0, r.sym1]))];
+  const prices = await getUsdPrices(symbols);
+
+  const results = raw.map(r => {
+    if (r.error) return r;
+    const p0 = prices[r.sym0], p1 = prices[r.sym1];
+    let positionValueUSD = null, feesValueUSD = null, totalReturnPct = null, ilPct = null, vsHoldUSD = null;
+    if (p0 != null && p1 != null) {
+      positionValueUSD = r.amount0Human * p0 + r.amount1Human * p1;
+      feesValueUSD = r.fee0Human * p0 + r.fee1Human * p1;
+      totalReturnPct = ((positionValueUSD + feesValueUSD - r.initialUSD) / r.initialUSD) * 100;
+
+      const entryApprox = Math.sqrt(r.priceMin * r.priceMax);
+      const ratio = r.priceNow / entryApprox;
+      ilPct = (2 * Math.sqrt(ratio) / (1 + ratio) - 1) * 100;
+      const holdValueUSD = r.initialUSD * (0.5 + 0.5 * ratio);
+      vsHoldUSD = (positionValueUSD + feesValueUSD) - holdValueUSD;
+    }
+    const withCalc = { ...r, positionValueUSD, feesValueUSD, totalReturnPct, ilPct, vsHoldUSD };
+    return { ...withCalc, suggestion: buildSuggestion(withCalc) };
+  });
+
+  results.forEach(r => console.log(r));
   await sendTelegram(buildMessage(results));
 }
 
