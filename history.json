@@ -1,5 +1,343 @@
 {
   "positions": {
+    "5642782": [
+      {
+        "t": "2026-08-11T22:57:46Z",
+        "inRange": true,
+        "distToLower": 33.3,
+        "distToUpper": 66.7,
+        "totalReturnPct": 1,
+        "priceNow": 23920.6142
+      },
+      {
+        "t": "2026-08-12T00:24:51Z",
+        "inRange": true,
+        "distToLower": 33.3,
+        "distToUpper": 66.7,
+        "totalReturnPct": 1.1,
+        "priceNow": 23920.6142
+      },
+      {
+        "t": "2026-08-12T07:20:39Z",
+        "inRange": true,
+        "distToLower": 32.6,
+        "distToUpper": 67.4,
+        "totalReturnPct": 1.9,
+        "priceNow": 23647.1164
+      },
+      {
+        "t": "2026-08-12T13:12:34Z",
+        "inRange": true,
+        "distToLower": 34.1,
+        "distToUpper": 65.9,
+        "totalReturnPct": 1.8,
+        "priceNow": 24209.3762
+      },
+      {
+        "t": "2026-08-12T17:30:23Z",
+        "inRange": true,
+        "distToLower": 33.9,
+        "distToUpper": 66.1,
+        "totalReturnPct": 1.3,
+        "priceNow": 24134.4471
+      },
+      {
+        "t": "2026-08-12T21:49:53Z",
+        "inRange": true,
+        "distToLower": 34.7,
+        "distToUpper": 65.3,
+        "totalReturnPct": 0,
+        "priceNow": 24420.906
+      },
+      {
+        "t": "2026-08-13T00:23:34Z",
+        "inRange": true,
+        "distToLower": 36.7,
+        "distToUpper": 63.3,
+        "totalReturnPct": -1.5,
+        "priceNow": 25111.808
+      },
+      {
+        "t": "2026-08-13T07:49:12Z",
+        "inRange": true,
+        "distToLower": 36,
+        "distToUpper": 64,
+        "totalReturnPct": -0.2,
+        "priceNow": 24874.3873
+      },
+      {
+        "t": "2026-08-13T13:12:54Z",
+        "inRange": true,
+        "distToLower": 37,
+        "distToUpper": 63,
+        "totalReturnPct": -1.7,
+        "priceNow": 25242.723
+      },
+      {
+        "t": "2026-08-13T17:32:36Z",
+        "inRange": true,
+        "distToLower": 36.5,
+        "distToUpper": 63.5,
+        "totalReturnPct": -1,
+        "priceNow": 25056.6255
+      },
+      {
+        "t": "2026-08-13T21:41:46Z",
+        "inRange": true,
+        "distToLower": 36.8,
+        "distToUpper": 63.2,
+        "totalReturnPct": -1.1,
+        "priceNow": 25149.5021
+      },
+      {
+        "t": "2026-08-14T00:23:35Z",
+        "inRange": true,
+        "distToLower": 36.6,
+        "distToUpper": 63.4,
+        "totalReturnPct": -0.8,
+        "priceNow": 25084.2016
+      },
+      {
+        "t": "2026-08-14T07:45:22Z",
+        "inRange": true,
+        "distToLower": 36.5,
+        "distToUpper": 63.5,
+        "totalReturnPct": -1.2,
+        "priceNow": 25054.1201
+      },
+      {
+        "t": "2026-08-14T13:08:34Z",
+        "inRange": true,
+        "distToLower": 36.8,
+        "distToUpper": 63.2,
+        "totalReturnPct": -2,
+        "priceNow": 25174.6629
+      },
+      {
+        "t": "2026-08-14T17:07:05Z",
+        "inRange": true,
+        "distToLower": 36.6,
+        "distToUpper": 63.4,
+        "totalReturnPct": -2.3,
+        "priceNow": 25101.7658
+      },
+      {
+        "t": "2026-08-14T20:35:51Z",
+        "inRange": true,
+        "distToLower": 36.6,
+        "distToUpper": 63.4,
+        "totalReturnPct": -1.8,
+        "priceNow": 25099.2559
+      },
+      {
+        "t": "2026-08-14T23:00:44Z",
+        "inRange": true,
+        "distToLower": 36.9,
+        "distToUpper": 63.1,
+        "totalReturnPct": -1.9,
+        "priceNow": 25202.3689
+      },
+      {
+        "t": "2026-08-15T05:02:23Z",
+        "inRange": true,
+        "distToLower": 36.5,
+        "distToUpper": 63.5,
+        "totalReturnPct": -1.1,
+        "priceNow": 25059.1312
+      },
+      {
+        "t": "2026-08-15T07:00:20Z",
+        "inRange": true,
+        "distToLower": 36.5,
+        "distToUpper": 63.5,
+        "totalReturnPct": -1.2,
+        "priceNow": 25059.1312
+      },
+      {
+        "t": "2026-08-15T10:59:51Z",
+        "inRange": true,
+        "distToLower": 37,
+        "distToUpper": 63,
+        "totalReturnPct": -2.1,
+        "priceNow": 25247.7718
+      },
+      {
+        "t": "2026-08-15T15:20:43Z",
+        "inRange": true,
+        "distToLower": 37.2,
+        "distToUpper": 62.8,
+        "totalReturnPct": -1.9,
+        "priceNow": 25316.0294
+      },
+      {
+        "t": "2026-08-15T18:53:25Z",
+        "inRange": true,
+        "distToLower": 37.5,
+        "distToUpper": 62.5,
+        "totalReturnPct": -2,
+        "priceNow": 25414.9498
+      },
+      {
+        "t": "2026-08-15T22:50:43Z",
+        "inRange": true,
+        "distToLower": 37.8,
+        "distToUpper": 62.2,
+        "totalReturnPct": -2.4,
+        "priceNow": 25534.6752
+      },
+      {
+        "t": "2026-08-16T05:15:51Z",
+        "inRange": true,
+        "distToLower": 38.8,
+        "distToUpper": 61.2,
+        "totalReturnPct": -2.8,
+        "priceNow": 25884.3014
+      },
+      {
+        "t": "2026-08-16T07:05:24Z",
+        "inRange": true,
+        "distToLower": 38.6,
+        "distToUpper": 61.4,
+        "totalReturnPct": -2.9,
+        "priceNow": 25824.8388
+      },
+      {
+        "t": "2026-08-16T11:00:51Z",
+        "inRange": true,
+        "distToLower": 37.8,
+        "distToUpper": 62.2,
+        "totalReturnPct": -2.2,
+        "priceNow": 25509.1546
+      },
+      {
+        "t": "2026-08-16T15:41:22Z",
+        "inRange": true,
+        "distToLower": 37.3,
+        "distToUpper": 62.7,
+        "totalReturnPct": -2.1,
+        "priceNow": 25346.4254
+      },
+      {
+        "t": "2026-08-16T18:55:13Z",
+        "inRange": true,
+        "distToLower": 37,
+        "distToUpper": 63,
+        "totalReturnPct": -1.4,
+        "priceNow": 25247.7718
+      },
+      {
+        "t": "2026-08-16T22:49:24Z",
+        "inRange": true,
+        "distToLower": 37.4,
+        "distToUpper": 62.6,
+        "totalReturnPct": -2,
+        "priceNow": 25371.7832
+      },
+      {
+        "t": "2026-08-17T05:15:51Z",
+        "inRange": true,
+        "distToLower": 37.6,
+        "distToUpper": 62.4,
+        "totalReturnPct": -1.1,
+        "priceNow": 25440.3762
+      },
+      {
+        "t": "2026-08-17T07:53:50Z",
+        "inRange": true,
+        "distToLower": 37.2,
+        "distToUpper": 62.8,
+        "totalReturnPct": -0.9,
+        "priceNow": 25308.4361
+      },
+      {
+        "t": "2026-08-17T12:03:38Z",
+        "inRange": true,
+        "distToLower": 37.5,
+        "distToUpper": 62.5,
+        "totalReturnPct": -1.4,
+        "priceNow": 25397.1664
+      },
+      {
+        "t": "2026-08-17T15:56:03Z",
+        "inRange": true,
+        "distToLower": 37.5,
+        "distToUpper": 62.5,
+        "totalReturnPct": -0.9,
+        "priceNow": 25397.1664
+      },
+      {
+        "t": "2026-08-17T19:00:08Z",
+        "inRange": true,
+        "distToLower": 37.5,
+        "distToUpper": 62.5,
+        "totalReturnPct": -1,
+        "priceNow": 25430.2026
+      },
+      {
+        "t": "2026-08-17T22:58:56Z",
+        "inRange": true,
+        "distToLower": 37.2,
+        "distToUpper": 62.8,
+        "totalReturnPct": -0.6,
+        "priceNow": 25295.7857
+      },
+      {
+        "t": "2026-08-18T05:09:41Z",
+        "inRange": true,
+        "distToLower": 38.1,
+        "distToUpper": 61.9,
+        "totalReturnPct": -1.9,
+        "priceNow": 25619.0746
+      },
+      {
+        "t": "2026-08-18T07:15:43Z",
+        "inRange": true,
+        "distToLower": 37.8,
+        "distToUpper": 62.2,
+        "totalReturnPct": -1.3,
+        "priceNow": 25524.4639
+      },
+      {
+        "t": "2026-08-18T11:17:20Z",
+        "inRange": true,
+        "distToLower": 36.6,
+        "distToUpper": 63.4,
+        "totalReturnPct": -0.5,
+        "priceNow": 25086.71
+      },
+      {
+        "t": "2026-08-18T16:02:12Z",
+        "inRange": true,
+        "distToLower": 36.9,
+        "distToUpper": 63.1,
+        "totalReturnPct": -0.9,
+        "priceNow": 25212.4514
+      },
+      {
+        "t": "2026-08-18T19:02:22Z",
+        "inRange": true,
+        "distToLower": 37.9,
+        "distToUpper": 62.1,
+        "totalReturnPct": -0.6,
+        "priceNow": 25542.3364
+      },
+      {
+        "t": "2026-08-18T21:06:03Z",
+        "inRange": true,
+        "distToLower": 37.5,
+        "distToUpper": 62.5,
+        "totalReturnPct": -0.1,
+        "priceNow": 25409.8676
+      },
+      {
+        "t": "2026-08-18T19:33:53.848Z",
+        "inRange": true,
+        "distToLower": 37.5,
+        "distToUpper": 62.5,
+        "totalReturnPct": -0.12905529855106376,
+        "priceNow": 25409.867550554292
+      }
+    ],
     "5759912": [
       {
         "t": "2026-08-11T22:57:46Z",
@@ -30,7 +368,7 @@
         "inRange": true,
         "distToLower": 58.4,
         "distToUpper": 41.6,
-        "totalReturnPct": 1.0,
+        "totalReturnPct": 1,
         "priceNow": 1908.2177
       },
       {
@@ -132,8 +470,8 @@
       {
         "t": "2026-08-14T23:00:44Z",
         "inRange": true,
-        "distToLower": 53.0,
-        "distToUpper": 47.0,
+        "distToLower": 53,
+        "distToUpper": 47,
         "totalReturnPct": 0.4,
         "priceNow": 1877.3674
       },
@@ -244,8 +582,8 @@
       {
         "t": "2026-08-17T07:53:50Z",
         "inRange": true,
-        "distToLower": 57.0,
-        "distToUpper": 43.0,
+        "distToLower": 57,
+        "distToUpper": 43,
         "totalReturnPct": 0.8,
         "priceNow": 1900.4104
       },
@@ -270,7 +608,7 @@
         "inRange": true,
         "distToLower": 58.4,
         "distToUpper": 41.6,
-        "totalReturnPct": 1.0,
+        "totalReturnPct": 1,
         "priceNow": 1908.0269
       },
       {
@@ -278,7 +616,7 @@
         "inRange": true,
         "distToLower": 58.4,
         "distToUpper": 41.6,
-        "totalReturnPct": 1.0,
+        "totalReturnPct": 1,
         "priceNow": 1908.0269
       },
       {
@@ -328,336 +666,14 @@
         "distToUpper": 40.3,
         "totalReturnPct": 1.3,
         "priceNow": 1915.2908
-      }
-    ],
-    "5642782": [
-      {
-        "t": "2026-08-11T22:57:46Z",
-        "inRange": true,
-        "distToLower": 33.3,
-        "distToUpper": 66.7,
-        "totalReturnPct": 1.0,
-        "priceNow": 23920.6142
       },
       {
-        "t": "2026-08-12T00:24:51Z",
+        "t": "2026-08-18T19:33:53.848Z",
         "inRange": true,
-        "distToLower": 33.3,
-        "distToUpper": 66.7,
-        "totalReturnPct": 1.1,
-        "priceNow": 23920.6142
-      },
-      {
-        "t": "2026-08-12T07:20:39Z",
-        "inRange": true,
-        "distToLower": 32.6,
-        "distToUpper": 67.4,
-        "totalReturnPct": 1.9,
-        "priceNow": 23647.1164
-      },
-      {
-        "t": "2026-08-12T13:12:34Z",
-        "inRange": true,
-        "distToLower": 34.1,
-        "distToUpper": 65.9,
-        "totalReturnPct": 1.8,
-        "priceNow": 24209.3762
-      },
-      {
-        "t": "2026-08-12T17:30:23Z",
-        "inRange": true,
-        "distToLower": 33.9,
-        "distToUpper": 66.1,
-        "totalReturnPct": 1.3,
-        "priceNow": 24134.4471
-      },
-      {
-        "t": "2026-08-12T21:49:53Z",
-        "inRange": true,
-        "distToLower": 34.7,
-        "distToUpper": 65.3,
-        "totalReturnPct": -0.0,
-        "priceNow": 24420.906
-      },
-      {
-        "t": "2026-08-13T00:23:34Z",
-        "inRange": true,
-        "distToLower": 36.7,
-        "distToUpper": 63.3,
-        "totalReturnPct": -1.5,
-        "priceNow": 25111.808
-      },
-      {
-        "t": "2026-08-13T07:49:12Z",
-        "inRange": true,
-        "distToLower": 36.0,
-        "distToUpper": 64.0,
-        "totalReturnPct": -0.2,
-        "priceNow": 24874.3873
-      },
-      {
-        "t": "2026-08-13T13:12:54Z",
-        "inRange": true,
-        "distToLower": 37.0,
-        "distToUpper": 63.0,
-        "totalReturnPct": -1.7,
-        "priceNow": 25242.723
-      },
-      {
-        "t": "2026-08-13T17:32:36Z",
-        "inRange": true,
-        "distToLower": 36.5,
-        "distToUpper": 63.5,
-        "totalReturnPct": -1.0,
-        "priceNow": 25056.6255
-      },
-      {
-        "t": "2026-08-13T21:41:46Z",
-        "inRange": true,
-        "distToLower": 36.8,
-        "distToUpper": 63.2,
-        "totalReturnPct": -1.1,
-        "priceNow": 25149.5021
-      },
-      {
-        "t": "2026-08-14T00:23:35Z",
-        "inRange": true,
-        "distToLower": 36.6,
-        "distToUpper": 63.4,
-        "totalReturnPct": -0.8,
-        "priceNow": 25084.2016
-      },
-      {
-        "t": "2026-08-14T07:45:22Z",
-        "inRange": true,
-        "distToLower": 36.5,
-        "distToUpper": 63.5,
-        "totalReturnPct": -1.2,
-        "priceNow": 25054.1201
-      },
-      {
-        "t": "2026-08-14T13:08:34Z",
-        "inRange": true,
-        "distToLower": 36.8,
-        "distToUpper": 63.2,
-        "totalReturnPct": -2.0,
-        "priceNow": 25174.6629
-      },
-      {
-        "t": "2026-08-14T17:07:05Z",
-        "inRange": true,
-        "distToLower": 36.6,
-        "distToUpper": 63.4,
-        "totalReturnPct": -2.3,
-        "priceNow": 25101.7658
-      },
-      {
-        "t": "2026-08-14T20:35:51Z",
-        "inRange": true,
-        "distToLower": 36.6,
-        "distToUpper": 63.4,
-        "totalReturnPct": -1.8,
-        "priceNow": 25099.2559
-      },
-      {
-        "t": "2026-08-14T23:00:44Z",
-        "inRange": true,
-        "distToLower": 36.9,
-        "distToUpper": 63.1,
-        "totalReturnPct": -1.9,
-        "priceNow": 25202.3689
-      },
-      {
-        "t": "2026-08-15T05:02:23Z",
-        "inRange": true,
-        "distToLower": 36.5,
-        "distToUpper": 63.5,
-        "totalReturnPct": -1.1,
-        "priceNow": 25059.1312
-      },
-      {
-        "t": "2026-08-15T07:00:20Z",
-        "inRange": true,
-        "distToLower": 36.5,
-        "distToUpper": 63.5,
-        "totalReturnPct": -1.2,
-        "priceNow": 25059.1312
-      },
-      {
-        "t": "2026-08-15T10:59:51Z",
-        "inRange": true,
-        "distToLower": 37.0,
-        "distToUpper": 63.0,
-        "totalReturnPct": -2.1,
-        "priceNow": 25247.7718
-      },
-      {
-        "t": "2026-08-15T15:20:43Z",
-        "inRange": true,
-        "distToLower": 37.2,
-        "distToUpper": 62.8,
-        "totalReturnPct": -1.9,
-        "priceNow": 25316.0294
-      },
-      {
-        "t": "2026-08-15T18:53:25Z",
-        "inRange": true,
-        "distToLower": 37.5,
-        "distToUpper": 62.5,
-        "totalReturnPct": -2.0,
-        "priceNow": 25414.9498
-      },
-      {
-        "t": "2026-08-15T22:50:43Z",
-        "inRange": true,
-        "distToLower": 37.8,
-        "distToUpper": 62.2,
-        "totalReturnPct": -2.4,
-        "priceNow": 25534.6752
-      },
-      {
-        "t": "2026-08-16T05:15:51Z",
-        "inRange": true,
-        "distToLower": 38.8,
-        "distToUpper": 61.2,
-        "totalReturnPct": -2.8,
-        "priceNow": 25884.3014
-      },
-      {
-        "t": "2026-08-16T07:05:24Z",
-        "inRange": true,
-        "distToLower": 38.6,
-        "distToUpper": 61.4,
-        "totalReturnPct": -2.9,
-        "priceNow": 25824.8388
-      },
-      {
-        "t": "2026-08-16T11:00:51Z",
-        "inRange": true,
-        "distToLower": 37.8,
-        "distToUpper": 62.2,
-        "totalReturnPct": -2.2,
-        "priceNow": 25509.1546
-      },
-      {
-        "t": "2026-08-16T15:41:22Z",
-        "inRange": true,
-        "distToLower": 37.3,
-        "distToUpper": 62.7,
-        "totalReturnPct": -2.1,
-        "priceNow": 25346.4254
-      },
-      {
-        "t": "2026-08-16T18:55:13Z",
-        "inRange": true,
-        "distToLower": 37.0,
-        "distToUpper": 63.0,
-        "totalReturnPct": -1.4,
-        "priceNow": 25247.7718
-      },
-      {
-        "t": "2026-08-16T22:49:24Z",
-        "inRange": true,
-        "distToLower": 37.4,
-        "distToUpper": 62.6,
-        "totalReturnPct": -2.0,
-        "priceNow": 25371.7832
-      },
-      {
-        "t": "2026-08-17T05:15:51Z",
-        "inRange": true,
-        "distToLower": 37.6,
-        "distToUpper": 62.4,
-        "totalReturnPct": -1.1,
-        "priceNow": 25440.3762
-      },
-      {
-        "t": "2026-08-17T07:53:50Z",
-        "inRange": true,
-        "distToLower": 37.2,
-        "distToUpper": 62.8,
-        "totalReturnPct": -0.9,
-        "priceNow": 25308.4361
-      },
-      {
-        "t": "2026-08-17T12:03:38Z",
-        "inRange": true,
-        "distToLower": 37.5,
-        "distToUpper": 62.5,
-        "totalReturnPct": -1.4,
-        "priceNow": 25397.1664
-      },
-      {
-        "t": "2026-08-17T15:56:03Z",
-        "inRange": true,
-        "distToLower": 37.5,
-        "distToUpper": 62.5,
-        "totalReturnPct": -0.9,
-        "priceNow": 25397.1664
-      },
-      {
-        "t": "2026-08-17T19:00:08Z",
-        "inRange": true,
-        "distToLower": 37.5,
-        "distToUpper": 62.5,
-        "totalReturnPct": -1.0,
-        "priceNow": 25430.2026
-      },
-      {
-        "t": "2026-08-17T22:58:56Z",
-        "inRange": true,
-        "distToLower": 37.2,
-        "distToUpper": 62.8,
-        "totalReturnPct": -0.6,
-        "priceNow": 25295.7857
-      },
-      {
-        "t": "2026-08-18T05:09:41Z",
-        "inRange": true,
-        "distToLower": 38.1,
-        "distToUpper": 61.9,
-        "totalReturnPct": -1.9,
-        "priceNow": 25619.0746
-      },
-      {
-        "t": "2026-08-18T07:15:43Z",
-        "inRange": true,
-        "distToLower": 37.8,
-        "distToUpper": 62.2,
-        "totalReturnPct": -1.3,
-        "priceNow": 25524.4639
-      },
-      {
-        "t": "2026-08-18T11:17:20Z",
-        "inRange": true,
-        "distToLower": 36.6,
-        "distToUpper": 63.4,
-        "totalReturnPct": -0.5,
-        "priceNow": 25086.71
-      },
-      {
-        "t": "2026-08-18T16:02:12Z",
-        "inRange": true,
-        "distToLower": 36.9,
-        "distToUpper": 63.1,
-        "totalReturnPct": -0.9,
-        "priceNow": 25212.4514
-      },
-      {
-        "t": "2026-08-18T19:02:22Z",
-        "inRange": true,
-        "distToLower": 37.9,
-        "distToUpper": 62.1,
-        "totalReturnPct": -0.6,
-        "priceNow": 25542.3364
-      },
-      {
-        "t": "2026-08-18T21:06:03Z",
-        "inRange": true,
-        "distToLower": 37.5,
-        "distToUpper": 62.5,
-        "totalReturnPct": -0.1,
-        "priceNow": 25409.8676
+        "distToLower": 59.7,
+        "distToUpper": 40.3,
+        "totalReturnPct": 1.347084664626097,
+        "priceNow": 1915.2908481678066
       }
     ]
   }
