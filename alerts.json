@@ -1,0 +1,12 @@
+{
+  "alerts": [
+    {
+      "id": 1787054190739,
+      "instrument": "NATGAS",
+      "priceCode": "NATURAL_GAS_USD",
+      "direction": "COMPRAR",
+      "triggerPrice": 2.6,
+      "note": ""
+    }
+  ]
+}
