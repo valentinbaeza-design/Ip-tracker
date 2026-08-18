@@ -72,13 +72,27 @@ async function main() {
 
     if (isTriggered(alert, currentPrice)) {
       const emoji = alert.direction === "COMPRAR" ? "🟢" : "🔴";
+      let setupLines = "";
+      if (alert.precioSL) setupLines += `Stop Loss sugerido: ${alert.precioSL}\n`;
+      if (alert.precioTP) setupLines += `Take Profit sugerido: ${alert.precioTP}\n`;
+      if (alert.apalancamiento) setupLines += `Apalancamiento sugerido: ${alert.apalancamiento}x\n`;
+      if (alert.invertido) setupLines += `Importe sugerido: $${alert.invertido}\n`;
+      let riskLine = "";
+      if (alert.precioSL && alert.invertido) {
+        const distanciaPct = Math.abs(alert.triggerPrice - alert.precioSL) / alert.triggerPrice;
+        const lev = alert.apalancamiento || 1;
+        const maxPerdida = alert.invertido * distanciaPct * lev;
+        riskLine = `Pérdida máxima estimada si salta el SL: $${maxPerdida.toFixed(2)}\n`;
+      }
       const msg =
         `${emoji} <b>Alerta de precio cumplida — ${alert.instrument}</b>\n\n` +
         `Dirección: ${alert.direction}\n` +
-        `Nivel disparador: ${alert.triggerPrice}\n` +
+        `Nivel disparador (= entrada sugerida): ${alert.triggerPrice}\n` +
         `Precio actual: ${currentPrice}\n` +
+        setupLines +
+        riskLine +
         (alert.note ? `Nota: ${alert.note}\n` : "") +
-        `\n👉 Revisa el panel y decide — esto no abre ninguna operación por ti.\n` +
+        `\n👉 Estos valores son una propuesta guardada por ti mismo en base al análisis previo — revísalos contra el precio real en eToro antes de aplicarlos, no los copies a ciegas.\n` +
         `Recuerda eliminar o editar esta alerta en alerts.json si actúas, o seguirás recibiendo el aviso en cada revisión mientras siga cumpliéndose.`;
       await sendTelegram(msg);
       console.log("Alerta enviada a Telegram.");
