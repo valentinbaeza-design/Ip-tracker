@@ -146,6 +146,9 @@ function computeSuggestedRange(positionHistory, bufferPct = 10) {
 }
 
 // ---------- Sugerencia de actuación, ahora con memoria ----------
+const WIDE_MARGIN_THRESHOLD = 30; // % de margen a partir del cual se considera "holgado"
+const MIN_DAYS_FOR_RANGE_SUGGESTION = 3; // no proponer ajustes de rango con menos historial que esto
+
 function buildSuggestion(r, positionHistory) {
   const msgs = [];
 
@@ -165,25 +168,28 @@ function buildSuggestion(r, positionHistory) {
   const openedAtStr = r.openedAt || (positionHistory.length ? positionHistory[0].t : null);
   const daysTracked = openedAtStr ? (Date.now() - new Date(openedAtStr).getTime()) / (1000 * 60 * 60 * 24) : null;
 
+  // --- Comentario sobre rendimiento (independiente de si el rango está bien dimensionado) ---
   if (r.totalReturnPct !== null && r.totalReturnPct < 0) {
-    if (daysTracked !== null && daysTracked < 3) {
+    if (daysTracked !== null && daysTracked < MIN_DAYS_FOR_RANGE_SUGGESTION) {
       msgs.push(`Rendimiento negativo, pero es pronto (${daysTracked.toFixed(1)} días de seguimiento) — las fees suelen tardar en compensar el movimiento inicial, no hay prisa por actuar.`);
-    } else if (marginLower > 35 && marginUpper > 35) {
-      let msg = "Rendimiento negativo sostenido y margen muy holgado a ambos lados: el rango actual puede ser más ancho de lo necesario, diluyendo las fees.";
-      const suggested = computeSuggestedRange(positionHistory);
-      if (suggested) {
-        msg += ` Basado en el movimiento real de precio de los últimos ${suggested.daysSpan.toFixed(1)} días, un rango más ajustado sería aprox. ${suggested.min.toFixed(4)} – ${suggested.max.toFixed(4)} (actual: ${r.priceMin.toFixed(4)} – ${r.priceMax.toFixed(4)}). Verifica esta cifra tú mismo antes de actuar — es una estimación simple, no sustituye tu criterio.`;
-      } else {
-        msg += " Todavía no hay historial suficiente para proponer un rango concreto — en unos días, con más lecturas acumuladas, esta sugerencia incluirá una cifra.";
-      }
-      msgs.push(msg);
     } else {
       msgs.push("Rendimiento negativo desde el depósito (las fees aún no compensan el movimiento de precio).");
     }
   }
 
-  // Tendencia: ¿el margen se está estrechando de forma sostenida hacia un lado
-  // en las últimas lecturas? (comparando las 3 más recientes, sin contar la actual)
+  // --- Eficiencia del rango: se evalúa siempre, gane o pierda la posición ahora mismo ---
+  const isWide = marginLower > WIDE_MARGIN_THRESHOLD && marginUpper > WIDE_MARGIN_THRESHOLD;
+  if (isWide && daysTracked !== null && daysTracked >= MIN_DAYS_FOR_RANGE_SUGGESTION) {
+    const suggested = computeSuggestedRange(positionHistory);
+    if (suggested) {
+      const tone = (r.totalReturnPct !== null && r.totalReturnPct >= 0)
+        ? "Vas positivo, pero el rango tiene margen de sobra a ambos lados — podrías estrecharlo para capturar más fees por cada dólar aportado, a cambio de más mantenimiento y riesgo de salir de rango antes."
+        : "El rango actual parece más ancho de lo que el precio ha necesitado, diluyendo las fees.";
+      msgs.push(`${tone} Basado en el movimiento real de los últimos ${suggested.daysSpan.toFixed(1)} días, un rango más ajustado sería aprox. ${suggested.min.toFixed(4)} – ${suggested.max.toFixed(4)} (actual: ${r.priceMin.toFixed(4)} – ${r.priceMax.toFixed(4)}). Verifica esta cifra tú mismo antes de actuar — es una estimación simple, no sustituye tu criterio.`);
+    }
+  }
+
+  // --- Tendencia: ¿el margen se estrecha de forma sostenida hacia un lado? ---
   if (positionHistory.length >= 3) {
     const recentLower = positionHistory.slice(-3).map(h => h.distToLower);
     const recentUpper = positionHistory.slice(-3).map(h => h.distToUpper);
