@@ -8,6 +8,9 @@ const WALLET = process.env.WALLET_ADDRESS;
 const config = JSON.parse(fs.readFileSync(new URL("./config.json", import.meta.url)));
 const POSITIONS = config.positions;
 
+const HISTORY_FILE = new URL("./history.json", import.meta.url);
+const MAX_HISTORY_PER_POSITION = 200; // ~33 días a razón de 6 lecturas/día
+
 const PM_ABI = [
   "function positions(uint256 tokenId) view returns (uint96 nonce, address operator, address token0, address token1, uint24 fee, int24 tickLower, int24 tickUpper, uint128 liquidity, uint256 feeGrowthInside0LastX128, uint256 feeGrowthInside1LastX128, uint128 tokensOwed0, uint128 tokensOwed1)",
   "function collect((uint256 tokenId, address recipient, uint128 amount0Max, uint128 amount1Max) params) returns (uint256 amount0, uint256 amount1)"
@@ -52,6 +55,25 @@ async function getUsdPrices(symbols) {
   }
 }
 
+// ---------- Historial persistente ----------
+function loadHistory() {
+  try {
+    return JSON.parse(fs.readFileSync(HISTORY_FILE, "utf8"));
+  } catch (e) {
+    return { positions: {} };
+  }
+}
+function saveHistory(history) {
+  fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
+}
+function appendToHistory(history, tokenId, entry) {
+  if (!history.positions[tokenId]) history.positions[tokenId] = [];
+  history.positions[tokenId].push(entry);
+  if (history.positions[tokenId].length > MAX_HISTORY_PER_POSITION) {
+    history.positions[tokenId] = history.positions[tokenId].slice(-MAX_HISTORY_PER_POSITION);
+  }
+}
+
 async function checkPosition(cfg) {
   const provider = new ethers.JsonRpcProvider(cfg.rpc, undefined, { batchMaxCount: 1 });
   const pm = new ethers.Contract(cfg.positionManager, PM_ABI, provider);
@@ -81,7 +103,6 @@ async function checkPosition(cfg) {
   const distToLower = ((priceNow - priceMin) / rangeWidth * 100).toFixed(1);
   const distToUpper = ((priceMax - priceNow) / rangeWidth * 100).toFixed(1);
 
-  // Cantidades actuales en la posición (matemática estándar Uniswap V3)
   const sqrtP = Number(slot0.sqrtPriceX96) / 2 ** 96;
   const sqrtA = tickToSqrtPrice(tickLower);
   const sqrtB = tickToSqrtPrice(tickUpper);
@@ -90,7 +111,6 @@ async function checkPosition(cfg) {
   const amount0Human = amount0 / 10 ** d0;
   const amount1Human = amount1 / 10 ** d1;
 
-  // Fees reales acumuladas (simulación de collect, sin gastar gas ni mover fondos)
   let fee0Human = 0, fee1Human = 0;
   try {
     const [fee0, fee1] = await pm.collect.staticCall(
@@ -104,17 +124,57 @@ async function checkPosition(cfg) {
   }
 
   return {
-    label: cfg.label, inRange, sym0, sym1, priceNow, priceMin, priceMax,
+    label: cfg.label, tokenId: String(cfg.tokenId), inRange, sym0, sym1, priceNow, priceMin, priceMax,
     distToLower, distToUpper, amount0Human, amount1Human, fee0Human, fee1Human,
-    initialUSD: cfg.initialUSD
+    initialUSD: cfg.initialUSD, openedAt: cfg.openedAt || null
   };
 }
 
-function buildSuggestion(r) {
+// ---------- Sugerencia de actuación, ahora con memoria ----------
+function buildSuggestion(r, positionHistory) {
   const msgs = [];
-  if (!r.inRange) msgs.push("Fuera de rango: no genera fees ahora mismo. Valora reequilibrar el rango o esperar a que el precio vuelva.");
-  else if (parseFloat(r.distToLower) < 10 || parseFloat(r.distToUpper) < 10) msgs.push("Cerca del límite del rango (<10% de margen). Vigila, podría salir pronto.");
-  if (r.totalReturnPct !== null && r.totalReturnPct < 0) msgs.push("Rendimiento negativo desde el depósito (las fees aún no compensan el movimiento de precio).");
+
+  if (!r.inRange) {
+    return "Fuera de rango: no genera fees ahora mismo. Valora reequilibrar el rango o esperar a que el precio vuelva.";
+  }
+
+  const marginLower = parseFloat(r.distToLower);
+  const marginUpper = parseFloat(r.distToUpper);
+
+  if (marginLower < 10 || marginUpper < 10) {
+    msgs.push("Cerca del límite del rango (<10% de margen). Vigila, podría salir pronto.");
+  }
+
+  // Días de seguimiento: usa la fecha de apertura si está en config.json,
+  // si no, usa la primera lectura del historial como referencia aproximada.
+  const openedAtStr = r.openedAt || (positionHistory.length ? positionHistory[0].t : null);
+  const daysTracked = openedAtStr ? (Date.now() - new Date(openedAtStr).getTime()) / (1000 * 60 * 60 * 24) : null;
+
+  if (r.totalReturnPct !== null && r.totalReturnPct < 0) {
+    if (daysTracked !== null && daysTracked < 3) {
+      msgs.push(`Rendimiento negativo, pero es pronto (${daysTracked.toFixed(1)} días de seguimiento) — las fees suelen tardar en compensar el movimiento inicial, no hay prisa por actuar.`);
+    } else if (marginLower > 35 && marginUpper > 35) {
+      msgs.push("Rendimiento negativo sostenido y margen muy holgado a ambos lados: el rango actual puede ser más ancho de lo necesario, diluyendo las fees. Valora cerrar y reabrir con un rango más estrecho.");
+    } else {
+      msgs.push("Rendimiento negativo desde el depósito (las fees aún no compensan el movimiento de precio).");
+    }
+  }
+
+  // Tendencia: ¿el margen se está estrechando de forma sostenida hacia un lado
+  // en las últimas lecturas? (comparando las 3 más recientes, sin contar la actual)
+  if (positionHistory.length >= 3) {
+    const recentLower = positionHistory.slice(-3).map(h => h.distToLower);
+    const recentUpper = positionHistory.slice(-3).map(h => h.distToUpper);
+    const narrowingLower = recentLower[0] > recentLower[1] && recentLower[1] > recentLower[2] && (recentLower[0] - recentLower[2]) > 5;
+    const narrowingUpper = recentUpper[0] > recentUpper[1] && recentUpper[1] > recentUpper[2] && (recentUpper[0] - recentUpper[2]) > 5;
+    if (narrowingLower && marginLower >= 10) {
+      msgs.push("El precio se acerca al límite inferior de forma sostenida en las últimas lecturas — vigila, podría tocar reequilibrar pronto.");
+    }
+    if (narrowingUpper && marginUpper >= 10) {
+      msgs.push("El precio se acerca al límite superior de forma sostenida en las últimas lecturas — vigila, podría tocar reequilibrar pronto.");
+    }
+  }
+
   if (msgs.length === 0) msgs.push("Sin acción necesaria, todo dentro de parámetros normales.");
   return msgs.join(" ");
 }
@@ -144,6 +204,8 @@ async function sendTelegram(text) {
 }
 
 async function main() {
+  const history = loadHistory();
+
   const raw = [];
   for (const cfg of POSITIONS) {
     try {
@@ -173,8 +235,26 @@ async function main() {
       vsHoldUSD = (positionValueUSD + feesValueUSD) - holdValueUSD;
     }
     const withCalc = { ...r, positionValueUSD, feesValueUSD, totalReturnPct, ilPct, vsHoldUSD };
-    return { ...withCalc, suggestion: buildSuggestion(withCalc) };
+    const positionHistory = history.positions[r.tokenId] || [];
+    const suggestion = buildSuggestion(withCalc, positionHistory);
+    return { ...withCalc, suggestion };
   });
+
+  // Añadir la lectura de hoy al historial (antes de enviar el mensaje, para que
+  // la próxima ejecución ya vea esta como "reciente")
+  const nowIso = new Date().toISOString();
+  results.forEach(r => {
+    if (r.error) return;
+    appendToHistory(history, r.tokenId, {
+      t: nowIso,
+      inRange: r.inRange,
+      distToLower: parseFloat(r.distToLower),
+      distToUpper: parseFloat(r.distToUpper),
+      totalReturnPct: r.totalReturnPct,
+      priceNow: r.priceNow
+    });
+  });
+  saveHistory(history);
 
   results.forEach(r => console.log(r));
   await sendTelegram(buildMessage(results));
