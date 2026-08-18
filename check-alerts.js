@@ -7,7 +7,7 @@
 //   TELEGRAM_CHAT_ID     (ya lo tienes del bot de Pools)
 //   OILPRICEAPI_KEY      (nuevo — tu clave de oilpriceapi.com)
 
-const fs = require("fs");
+import fs from "fs";
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
