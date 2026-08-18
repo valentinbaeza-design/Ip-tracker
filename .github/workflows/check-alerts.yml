@@ -1,0 +1,21 @@
+name: Check price alerts
+
+on:
+  schedule:
+    - cron: "0 */4 * * *"   # cada 4 horas, mismo ritmo que el bot de Pools
+  workflow_dispatch: {}      # permite lanzarlo a mano desde la pestaña Actions
+
+jobs:
+  check-alerts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Run check-alerts.js
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          OILPRICEAPI_KEY: ${{ secrets.OILPRICEAPI_KEY }}
+        run: node check-alerts.js
