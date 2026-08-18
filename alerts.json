@@ -5,7 +5,7 @@
       "instrument": "NATGAS",
       "priceCode": "NATURAL_GAS_USD",
       "direction": "COMPRAR",
-      "triggerPrice": 2.6,
+      "triggerPrice": 2.65,
       "precioSL": 2.55,
       "precioTP": 3,
       "apalancamiento": 5,
