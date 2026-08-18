@@ -1,0 +1,11 @@
+{
+  "calibrations": [
+    {
+      "instrument": "NATGAS",
+      "proxySymbol": "UNG",
+      "ratio": 0.2842319430315361,
+      "calibratedAt": "2026-08-18T18:25:36.707Z",
+      "maxDaysBeforeReminder": 14
+    }
+  ]
+}
