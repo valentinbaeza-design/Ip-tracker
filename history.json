@@ -352,6 +352,14 @@
         "distToUpper": 62.5,
         "totalReturnPct": -0.3094055530314022,
         "priceNow": 25409.867550554292
+      },
+      {
+        "t": "2026-08-18T20:53:12.262Z",
+        "inRange": true,
+        "distToLower": 37.5,
+        "distToUpper": 62.5,
+        "totalReturnPct": -0.5010213698290187,
+        "priceNow": 25412.408537309348
       }
     ],
     "5759912": [
@@ -705,6 +713,14 @@
         "distToLower": 59.7,
         "distToUpper": 40.3,
         "totalReturnPct": 1.3122599354851197,
+        "priceNow": 1915.2908481678066
+      },
+      {
+        "t": "2026-08-18T20:53:12.262Z",
+        "inRange": true,
+        "distToLower": 59.7,
+        "distToUpper": 40.3,
+        "totalReturnPct": 1.267769330289068,
         "priceNow": 1915.2908481678066
       }
     ]
