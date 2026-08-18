@@ -130,6 +130,21 @@ async function checkPosition(cfg) {
   };
 }
 
+// ---------- Rango sugerido a partir del movimiento real de precio observado ----------
+function computeSuggestedRange(positionHistory, bufferPct = 10) {
+  const withPrice = positionHistory.filter(h => typeof h.priceNow === "number");
+  if (withPrice.length < 15) return null; // poco histórico todavía, no proponer nada
+  const prices = withPrice.map(h => h.priceNow);
+  const observedMin = Math.min(...prices);
+  const observedMax = Math.max(...prices);
+  const pad = (observedMax - observedMin) * (bufferPct / 100);
+  return {
+    min: observedMin - pad,
+    max: observedMax + pad,
+    daysSpan: (new Date(withPrice[withPrice.length - 1].t) - new Date(withPrice[0].t)) / (1000 * 60 * 60 * 24)
+  };
+}
+
 // ---------- Sugerencia de actuación, ahora con memoria ----------
 function buildSuggestion(r, positionHistory) {
   const msgs = [];
@@ -154,7 +169,14 @@ function buildSuggestion(r, positionHistory) {
     if (daysTracked !== null && daysTracked < 3) {
       msgs.push(`Rendimiento negativo, pero es pronto (${daysTracked.toFixed(1)} días de seguimiento) — las fees suelen tardar en compensar el movimiento inicial, no hay prisa por actuar.`);
     } else if (marginLower > 35 && marginUpper > 35) {
-      msgs.push("Rendimiento negativo sostenido y margen muy holgado a ambos lados: el rango actual puede ser más ancho de lo necesario, diluyendo las fees. Valora cerrar y reabrir con un rango más estrecho.");
+      let msg = "Rendimiento negativo sostenido y margen muy holgado a ambos lados: el rango actual puede ser más ancho de lo necesario, diluyendo las fees.";
+      const suggested = computeSuggestedRange(positionHistory);
+      if (suggested) {
+        msg += ` Basado en el movimiento real de precio de los últimos ${suggested.daysSpan.toFixed(1)} días, un rango más ajustado sería aprox. ${suggested.min.toFixed(4)} – ${suggested.max.toFixed(4)} (actual: ${r.priceMin.toFixed(4)} – ${r.priceMax.toFixed(4)}). Verifica esta cifra tú mismo antes de actuar — es una estimación simple, no sustituye tu criterio.`;
+      } else {
+        msg += " Todavía no hay historial suficiente para proponer un rango concreto — en unos días, con más lecturas acumuladas, esta sugerencia incluirá una cifra.";
+      }
+      msgs.push(msg);
     } else {
       msgs.push("Rendimiento negativo desde el depósito (las fees aún no compensan el movimiento de precio).");
     }
