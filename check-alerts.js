@@ -67,6 +67,12 @@ async function getAlphaVantagePriceCached(symbol) {
   return alphaVantageCache[symbol];
 }
 
+// Formatea fecha/hora en horario de Madrid, para que el mensaje sea inequívoco
+// sin depender de cómo Telegram muestre la hora de recepción en tu móvil.
+function nowMadrid() {
+  return new Date().toLocaleString("es-ES", { timeZone: "Europe/Madrid", dateStyle: "short", timeStyle: "medium" });
+}
+
 async function checkCalibrations() {
   if (!fs.existsSync("calibration.json")) {
     console.log("No hay calibration.json en el repo, nada que revisar.");
@@ -99,7 +105,8 @@ async function checkCalibrations() {
 
       if (splitSuspected) {
         await sendTelegram(
-          `⚠️ <b>Posible split detectado — ${cal.instrument}</b>\n\n` +
+          `⚠️ <b>Posible split detectado — ${cal.instrument}</b>\n` +
+          `<i>${nowMadrid()} (hora Madrid)</i>\n\n` +
           `${cal.proxySymbol} ha dado un salto de precio mucho mayor de lo habitual (de ${closes[1]} a ${closes[0]}).\n` +
           `Esto suele ser la firma de un contra-split del ETF, no un movimiento real del mercado.\n\n` +
           `👉 Recalibra en el panel antes de fiarte del ratio actual (×${cal.ratio}).`
@@ -107,7 +114,8 @@ async function checkCalibrations() {
         console.log(`${cal.instrument}: posible split detectado, aviso enviado.`);
       } else if (daysSince > (cal.maxDaysBeforeReminder || 14)) {
         await sendTelegram(
-          `🔧 <b>Recordatorio de calibración — ${cal.instrument}</b>\n\n` +
+          `🔧 <b>Recordatorio de calibración — ${cal.instrument}</b>\n` +
+          `<i>${nowMadrid()} (hora Madrid)</i>\n\n` +
           `Han pasado ${Math.floor(daysSince)} días desde tu última calibración (ratio ×${cal.ratio}).\n` +
           `👉 Cuando tengas un momento con eToro abierto, recalibra en el panel para mantener la traducción de niveles precisa.`
         );
@@ -174,14 +182,16 @@ async function buildTrendEvaluationMessage(alert, currentPrice) {
     }
   }
 
-  let msg = `🔍 <b>Evaluación de alerta — ${alert.instrument}</b>\n\n`;
+  let msg = `🔍 <b>Evaluación de alerta — ${alert.instrument}</b>\n`;
+  msg += `<i>${nowMadrid()} (hora Madrid)</i>\n\n`;
   msg += `Dirección: ${alert.direction}\n`;
   msg += `Disparador: ${alert.triggerPrice}\n`;
   msg += `Precio actual: ${currentPrice}\n`;
   msg += `Distancia hasta el disparador: ${distancePct.toFixed(1)}%\n`;
   if (trendLine) msg += `${trendLine}\n`;
   msg += `\n👉 ${adviceLine}`;
-  if (alert.note) msg += `\n\nNota original: ${alert.note}`;
+  if (alert.note) msg += `\n\n(Info de la posición: ${alert.note})`;
+  msg += `\n\n<i>Este es el chequeo de tendencia de cada 4h — no significa que la alerta se haya ejecutado. El aviso de ejecución real llega por separado (check cada 15 min) si el precio toca el disparador.</i>`;
   return msg;
 }
 
