@@ -123,10 +123,16 @@ async function checkPosition(cfg) {
     console.error(`No se pudieron leer fees de ${cfg.label}:`, e.message);
   }
 
+  // Dirección del token "otro" (el que no es WETH), para construir el enlace de apertura
+  const otherTokenAddress = sym0 === "WETH" ? pos.token1 : pos.token0;
+  const feeTierBps = Number(pos.fee);
+  const chainSlug = cfg.chainSlug || (/base/i.test(cfg.label) ? "base" : /arbitrum/i.test(cfg.label) ? "arbitrum" : "");
+
   return {
     label: cfg.label, tokenId: String(cfg.tokenId), inRange, sym0, sym1, priceNow, priceMin, priceMax,
     distToLower, distToUpper, amount0Human, amount1Human, fee0Human, fee1Human,
-    initialUSD: cfg.initialUSD, openedAt: cfg.openedAt || null
+    initialUSD: cfg.initialUSD, openedAt: cfg.openedAt || null,
+    otherTokenAddress, feeTierBps, chainSlug
   };
 }
 
@@ -145,15 +151,33 @@ function computeSuggestedRange(positionHistory, bufferPct = 10) {
   };
 }
 
+// ---------- Pasos concretos de reequilibrio (enlaces + instrucciones) ----------
+function buildActionSteps(r, targetMin, targetMax) {
+  const openUrl = r.chainSlug
+    ? `https://app.uniswap.org/positions/create/v3?currencyA=NATIVE&currencyB=${r.otherTokenAddress}&chain=${r.chainSlug}&fee=${r.feeTierBps}`
+    : null;
+  return {
+    targetMin, targetMax,
+    closeUrl: "https://app.uniswap.org/positions",
+    openUrl
+  };
+}
+
 // ---------- Sugerencia de actuación, ahora con memoria ----------
 const WIDE_MARGIN_THRESHOLD = 30; // % de margen a partir del cual se considera "holgado"
 const MIN_DAYS_FOR_RANGE_SUGGESTION = 3; // no proponer ajustes de rango con menos historial que esto
 
 function buildSuggestion(r, positionHistory) {
   const msgs = [];
+  let action = null;
 
   if (!r.inRange) {
-    return "Fuera de rango: no genera fees ahora mismo. Valora reequilibrar el rango o esperar a que el precio vuelva.";
+    const suggestedOut = computeSuggestedRange(positionHistory);
+    if (suggestedOut) action = buildActionSteps(r, suggestedOut.min, suggestedOut.max);
+    return {
+      text: "Fuera de rango: no genera fees ahora mismo. Valora reequilibrar el rango o esperar a que el precio vuelva.",
+      action
+    };
   }
 
   const marginLower = parseFloat(r.distToLower);
@@ -163,12 +187,9 @@ function buildSuggestion(r, positionHistory) {
     msgs.push("Cerca del límite del rango (<10% de margen). Vigila, podría salir pronto.");
   }
 
-  // Días de seguimiento: usa la fecha de apertura si está en config.json,
-  // si no, usa la primera lectura del historial como referencia aproximada.
   const openedAtStr = r.openedAt || (positionHistory.length ? positionHistory[0].t : null);
   const daysTracked = openedAtStr ? (Date.now() - new Date(openedAtStr).getTime()) / (1000 * 60 * 60 * 24) : null;
 
-  // --- Comentario sobre rendimiento (independiente de si el rango está bien dimensionado) ---
   if (r.totalReturnPct !== null && r.totalReturnPct < 0) {
     if (daysTracked !== null && daysTracked < MIN_DAYS_FOR_RANGE_SUGGESTION) {
       msgs.push(`Rendimiento negativo, pero es pronto (${daysTracked.toFixed(1)} días de seguimiento) — las fees suelen tardar en compensar el movimiento inicial, no hay prisa por actuar.`);
@@ -177,7 +198,6 @@ function buildSuggestion(r, positionHistory) {
     }
   }
 
-  // --- Eficiencia del rango: se evalúa siempre, gane o pierda la posición ahora mismo ---
   const isWide = marginLower > WIDE_MARGIN_THRESHOLD && marginUpper > WIDE_MARGIN_THRESHOLD;
   if (isWide && daysTracked !== null && daysTracked >= MIN_DAYS_FOR_RANGE_SUGGESTION) {
     const suggested = computeSuggestedRange(positionHistory);
@@ -186,10 +206,10 @@ function buildSuggestion(r, positionHistory) {
         ? "Vas positivo, pero el rango tiene margen de sobra a ambos lados — podrías estrecharlo para capturar más fees por cada dólar aportado, a cambio de más mantenimiento y riesgo de salir de rango antes."
         : "El rango actual parece más ancho de lo que el precio ha necesitado, diluyendo las fees.";
       msgs.push(`${tone} Basado en el movimiento real de los últimos ${suggested.daysSpan.toFixed(1)} días, un rango más ajustado sería aprox. ${suggested.min.toFixed(4)} – ${suggested.max.toFixed(4)} (actual: ${r.priceMin.toFixed(4)} – ${r.priceMax.toFixed(4)}). Verifica esta cifra tú mismo antes de actuar — es una estimación simple, no sustituye tu criterio.`);
+      action = buildActionSteps(r, suggested.min, suggested.max);
     }
   }
 
-  // --- Tendencia: ¿el margen se estrecha de forma sostenida hacia un lado? ---
   if (positionHistory.length >= 3) {
     const recentLower = positionHistory.slice(-3).map(h => h.distToLower);
     const recentUpper = positionHistory.slice(-3).map(h => h.distToUpper);
@@ -204,22 +224,34 @@ function buildSuggestion(r, positionHistory) {
   }
 
   if (msgs.length === 0) msgs.push("Sin acción necesaria, todo dentro de parámetros normales.");
-  return msgs.join(" ");
+  return { text: msgs.join(" "), action };
 }
 
-function buildMessage(results) {
-  const now = new Date().toLocaleString("es-ES", { timeZone: "Europe/Madrid" });
-  const lines = results.map(r => {
-    if (r.error) return `⚠️ *${r.label}*\nError leyendo datos: ${r.error}`;
-    const icon = r.inRange ? "🟢" : "🔴";
-    const status = r.inRange ? "dentro de rango" : "FUERA DE RANGO";
-    const valueLine = r.positionValueUSD !== null
-      ? `Valor actual: $${r.positionValueUSD.toFixed(2)} · Fees ganadas: $${r.feesValueUSD.toFixed(2)}\nRendimiento total: ${r.totalReturnPct.toFixed(1)}%`
-      : `Fees ganadas: ${r.fee0Human.toFixed(6)} ${r.sym0} + ${r.fee1Human.toFixed(6)} ${r.sym1} (sin precio USD disponible)`;
-    const ilLine = r.ilPct !== null ? `IL aprox. vs entrada: ${r.ilPct.toFixed(2)}% · vs hold 50/50: ${r.vsHoldUSD >= 0 ? "+" : ""}$${r.vsHoldUSD.toFixed(2)}` : "";
-    return `${icon} *${r.label}*\n${status} — ${r.sym1}/${r.sym0}: ${r.priceNow.toFixed(4)}\nMargen: ${r.distToLower}% / ${r.distToUpper}%\n${valueLine}\n${ilLine}\n👉 ${r.suggestion}`;
-  });
-  return `📊 *Estado de posiciones LP* — ${now}\n\n` + lines.join("\n\n") + `\n\n_IL y comparativa vs hold son aproximados (sin precio de entrada exacto registrado)._`;
+function buildPositionMessage(r, now) {
+  if (r.error) return `⚠️ *${r.label}*\n${now}\nError leyendo datos: ${r.error}`;
+
+  const icon = r.inRange ? "🟢" : "🔴";
+  const status = r.inRange ? "dentro de rango" : "FUERA DE RANGO";
+  const valueLine = r.positionValueUSD !== null
+    ? `Valor actual: $${r.positionValueUSD.toFixed(2)} · Fees ganadas: $${r.feesValueUSD.toFixed(2)}\nRendimiento total: ${r.totalReturnPct.toFixed(1)}%`
+    : `Fees ganadas: ${r.fee0Human.toFixed(6)} ${r.sym0} + ${r.fee1Human.toFixed(6)} ${r.sym1} (sin precio USD disponible)`;
+  const ilLine = r.ilPct !== null ? `IL aprox. vs entrada: ${r.ilPct.toFixed(2)}% · vs hold 50/50: ${r.vsHoldUSD >= 0 ? "+" : ""}$${r.vsHoldUSD.toFixed(2)}` : "";
+
+  let msg = `${icon} *${r.label}* — ${now}\n${status} — ${r.sym1}/${r.sym0}: ${r.priceNow.toFixed(4)}\nMargen: ${r.distToLower}% / ${r.distToUpper}%\n${valueLine}\n${ilLine}\n👉 ${r.suggestion.text}`;
+
+  const action = r.suggestion.action;
+  if (action) {
+    msg += `\n\n*Pasos para reequilibrar:*\n`;
+    msg += `1️⃣ Cierra/retira la posición actual: revisa tu lista en ${action.closeUrl}, busca "*${r.label}*" (NFT #${r.tokenId}) y pulsa en ella → retirar liquidez.\n`;
+    if (action.openUrl) {
+      msg += `2️⃣ Abre la nueva posición aquí: ${action.openUrl}\n`;
+      msg += `3️⃣ Al elegir el rango, usa los botones +/- (nunca escribas el precio directamente) hasta acercarte a: *${action.targetMin.toFixed(4)} – ${action.targetMax.toFixed(4)}*.\n`;
+    }
+    msg += `\n⚠️ Verifica red y direcciones de contrato antes de firmar. Esto es una propuesta calculada, no una instrucción a ciegas — decide tú si te compensa el gas y el mantenimiento extra.`;
+  }
+
+  msg += `\n\n_IL y comparativa vs hold son aproximados (sin precio de entrada exacto registrado)._`;
+  return msg;
 }
 
 async function sendTelegram(text) {
@@ -285,7 +317,12 @@ async function main() {
   saveHistory(history);
 
   results.forEach(r => console.log(r));
-  await sendTelegram(buildMessage(results));
+
+  const now = new Date().toLocaleString("es-ES", { timeZone: "Europe/Madrid" });
+  for (const r of results) {
+    await sendTelegram(buildPositionMessage(r, now));
+    await new Promise(resolve => setTimeout(resolve, 500)); // pequeña pausa entre mensajes
+  }
 }
 
 main();
