@@ -1,4 +1,4 @@
-name: Check price alerts
+name: Check price alerts (evaluación, cada 4h)
 
 on:
   schedule:
@@ -17,6 +17,6 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          OILPRICEAPI_KEY: ${{ secrets.OILPRICEAPI_KEY }}
+          APININJAS_KEY: ${{ secrets.APININJAS_KEY }}
           ALPHAVANTAGE_KEY: ${{ secrets.ALPHAVANTAGE_KEY }}
         run: node check-alerts.js
