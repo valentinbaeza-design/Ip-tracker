@@ -48,6 +48,12 @@ async function getPrice(priceCode) {
   return json.price;
 }
 
+// Formatea fecha/hora en horario de Madrid, para que el mensaje sea inequívoco
+// sin depender de cómo Telegram muestre la hora de recepción en tu móvil.
+function nowMadrid() {
+  return new Date().toLocaleString("es-ES", { timeZone: "Europe/Madrid", dateStyle: "short", timeStyle: "medium" });
+}
+
 function isTriggered(alert, currentPrice) {
   if (alert.direction === "COMPRAR") return currentPrice <= alert.triggerPrice;
   if (alert.direction === "CORTO") return currentPrice >= alert.triggerPrice;
@@ -117,7 +123,8 @@ async function main() {
         ? `\n⚠️ Tienes una orden contraria abierta en eToro para el mismo instrumento — si esta ya se ejecutó, cancela la otra ahora para no quedarte con largo y corto a la vez.\n`
         : "";
       const msg =
-        `${emoji} <b>Disparador tocado — ${alert.instrument} (${alert.direction})</b>\n\n` +
+        `${emoji} <b>Disparador tocado — ${alert.instrument} (${alert.direction})</b>\n` +
+        `<i>${nowMadrid()} (hora Madrid)</i>\n\n` +
         `Nivel disparador: ${alert.triggerPrice}\n` +
         `Precio API (referencia): ${currentPrice}\n` +
         `${calibrationLineFor(alert.instrument, calibrations)}\n\n` +
@@ -139,4 +146,5 @@ main().catch(e => {
   console.error("Error general:", e);
   process.exit(1);
 });
+
 
