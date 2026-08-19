@@ -120,25 +120,39 @@ async function buildTrendEvaluationMessage(alert, currentPrice) {
   if (alert.proxySymbol && ALPHAVANTAGE_KEY) {
     try {
       const closes = await getAlphaVantagePrice(alert.proxySymbol); // más reciente primero
-      if (closes.length >= 6) {
+      if (closes.length >= 10) {
         const latest = closes[0];
         const past = closes[5]; // ~5 sesiones atrás
         const trendPct = ((latest - past) / past) * 100;
-        trendLine = `Tendencia reciente (${alert.proxySymbol}, ~5 sesiones): ${trendPct >= 0 ? "+" : ""}${trendPct.toFixed(1)}%.`;
 
-        const favorable = alert.direction === "COMPRAR" ? trendPct < -1 : trendPct > 1;
-        const contrary = alert.direction === "COMPRAR" ? trendPct > 1 : trendPct < -1;
+        // Volatilidad diaria típica reciente (media de variaciones día a día en % absoluto,
+        // sobre las 9 sesiones disponibles). Sustituye al umbral fijo anterior (±1%),
+        // que resultaba demasiado estricto para un activo tan volátil como el gas natural.
+        const dailyMoves = [];
+        for (let i = 0; i < closes.length - 1; i++) {
+          dailyMoves.push(Math.abs(closes[i] - closes[i + 1]) / closes[i + 1] * 100);
+        }
+        const avgDailyMovePct = dailyMoves.reduce((a, b) => a + b, 0) / dailyMoves.length;
+
+        // Banda de "ruido esperado" en una ventana de 5 sesiones: escala la volatilidad
+        // diaria por raíz de 5 (comportamiento típico de un paseo aleatorio de precios).
+        const expectedNoiseBand = avgDailyMovePct * Math.sqrt(5);
+
+        trendLine = `Tendencia reciente (${alert.proxySymbol}, ~5 sesiones): ${trendPct >= 0 ? "+" : ""}${trendPct.toFixed(1)}% (ruido normal esperado: ±${expectedNoiseBand.toFixed(1)}%).`;
+
+        const favorable = alert.direction === "COMPRAR" ? trendPct < -expectedNoiseBand : trendPct > expectedNoiseBand;
+        const contrary = alert.direction === "COMPRAR" ? trendPct > expectedNoiseBand : trendPct < -expectedNoiseBand;
 
         if (favorable) {
-          adviceLine = "El movimiento reciente va en la dirección que tu alerta necesita — parece razonable mantenerla tal cual.";
+          adviceLine = "El movimiento reciente va en la dirección que tu alerta necesita, y supera el ruido habitual del activo — parece razonable mantenerla tal cual.";
         } else if (contrary) {
           const altTrigger = currentPrice - distance * 0.5;
           adviceLine =
-            `El movimiento reciente va en dirección contraria a tu alerta — puede tardar más de lo esperado o no cumplirse pronto. ` +
+            `El movimiento reciente va en dirección contraria a tu alerta, y por encima de lo que sería ruido normal — puede tardar más de lo esperado o no cumplirse pronto. ` +
             `Si prefieres no esperar tanto, podrías considerar un disparador más cercano, aprox. ${altTrigger.toFixed(3)} en lugar del actual (${alert.triggerPrice}). ` +
             `Sería sustituir esta alerta, no añadir una nueva — decide tú si te compensa asumir un precio de entrada peor a cambio de más probabilidad de que se cumpla pronto, o prefieres mantener la actual y esperar más.`;
         } else {
-          adviceLine = "Sin tendencia clara en las últimas sesiones — la alerta actual sigue siendo razonable, no hace falta cambiar nada.";
+          adviceLine = "El movimiento reciente está dentro del ruido normal del activo — no hay tendencia clara todavía, la alerta actual sigue siendo razonable.";
         }
       }
     } catch (e) {
