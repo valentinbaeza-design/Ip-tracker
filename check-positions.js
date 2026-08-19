@@ -329,7 +329,10 @@ async function main() {
       distToLower: parseFloat(r.distToLower),
       distToUpper: parseFloat(r.distToUpper),
       totalReturnPct: r.totalReturnPct,
-      priceNow: r.priceNow
+      priceNow: r.priceNow,
+      positionValueUSD: r.positionValueUSD,
+      feesValueUSD: r.feesValueUSD,
+      ilPct: r.ilPct
     });
   });
   saveHistory(history);
