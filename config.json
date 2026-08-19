@@ -18,5 +18,15 @@
       "initialUSD": 3.11,
       "note": "Sin fecha/precio de entrada exacto registrado — IL es aproximado"
     }
+    {
+      "label": "WETH/USDC (rango estrecho) · Base",
+      "tokenId": 5786604,
+      "rpc": "https://mainnet.base.org",
+      "positionManager": "0x03a520b32C04BF3bEEf7BEb72E919cf822Ed34f1",
+      "factory": "0x33128a8fC17869897dcE68Ed026d694621f6FDfD",
+      "initialUSD": 46.32,
+      "openedAt": "2026-08-19T00:00:00.000Z",
+      "note": "Clon de rango estrecho de #5759912, para comparar rendimiento"
+    }
   ]
 }
