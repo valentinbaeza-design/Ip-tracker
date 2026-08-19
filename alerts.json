@@ -1,17 +1,3 @@
 {
-  "alerts": [
-    {
-      "id": 1787165671683,
-      "instrument": "NATGAS",
-      "priceCode": "NATURAL_GAS_USD",
-      "proxySymbol": "UNG",
-      "direction": "COMPRAR",
-      "triggerPrice": 2.65,
-      "precioSL": 0.55,
-      "precioTP": 3,
-      "apalancamiento": 10,
-      "invertido": 90.34,
-      "note": "Orden de precio ya colocada en eToro (X10, €90.34). Cancelar la orden CORTO en cuanto esta se ejecute"
-    }
-  ]
+  "alerts": []
 }
