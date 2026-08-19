@@ -165,7 +165,9 @@ function buildActionSteps(r, targetMin, targetMax) {
 
 // ---------- Sugerencia de actuación, ahora con memoria ----------
 const WIDE_MARGIN_THRESHOLD = 30; // % de margen a partir del cual se considera "holgado"
-const MIN_DAYS_FOR_RANGE_SUGGESTION = 3; // no proponer ajustes de rango con menos historial que esto
+const MIN_DAYS_FOR_RANGE_SUGGESTION = 3; // mínimo técnico para poder calcular algo
+const RECOMMENDED_DAYS_BEFORE_ACTING = 21; // con menos, la propuesta es orientativa, no una recomendación firme
+const MIN_USD_TO_JUSTIFY_GAS = 15; // por debajo de esto, el gas de retirar+abrir probablemente se come la mejora
 
 function buildSuggestion(r, positionHistory) {
   const msgs = [];
@@ -205,7 +207,23 @@ function buildSuggestion(r, positionHistory) {
       const tone = (r.totalReturnPct !== null && r.totalReturnPct >= 0)
         ? "Vas positivo, pero el rango tiene margen de sobra a ambos lados — podrías estrecharlo para capturar más fees por cada dólar aportado, a cambio de más mantenimiento y riesgo de salir de rango antes."
         : "El rango actual parece más ancho de lo que el precio ha necesitado, diluyendo las fees.";
-      msgs.push(`${tone} Basado en el movimiento real de los últimos ${suggested.daysSpan.toFixed(1)} días, un rango más ajustado sería aprox. ${suggested.min.toFixed(4)} – ${suggested.max.toFixed(4)} (actual: ${r.priceMin.toFixed(4)} – ${r.priceMax.toFixed(4)}). Verifica esta cifra tú mismo antes de actuar — es una estimación simple, no sustituye tu criterio.`);
+      let msg = `${tone} Basado en el movimiento real de los últimos ${suggested.daysSpan.toFixed(1)} días, un rango más ajustado sería aprox. ${suggested.min.toFixed(4)} – ${suggested.max.toFixed(4)} (actual: ${r.priceMin.toFixed(4)} – ${r.priceMax.toFixed(4)}). Verifica esta cifra tú mismo antes de actuar — es una estimación simple, no sustituye tu criterio.`;
+
+      // Justificación con datos de si merece la pena actuar YA o esperar
+      const reasons = [];
+      if (daysTracked < RECOMMENDED_DAYS_BEFORE_ACTING) {
+        reasons.push(`solo hay ${daysTracked.toFixed(1)} días de historial (recomendado esperar a ~${RECOMMENDED_DAYS_BEFORE_ACTING} para fiarte más del rango calculado)`);
+      }
+      if (r.positionValueUSD !== null && r.positionValueUSD < MIN_USD_TO_JUSTIFY_GAS) {
+        reasons.push(`la posición son $${r.positionValueUSD.toFixed(2)} — con ese tamaño, el gas de retirar + abrir de nuevo puede comerse buena parte o toda la mejora esperada`);
+      }
+      if (reasons.length > 0) {
+        msg += ` 🕐 Mi valoración: de momento esperaría, porque ${reasons.join(" y ")}.`;
+      } else {
+        msg += ` 🕐 Mi valoración: con este historial y este tamaño de posición, ya es razonable planteárselo en serio si el gas actual no es excesivo.`;
+      }
+
+      msgs.push(msg);
       action = buildActionSteps(r, suggested.min, suggested.max);
     }
   }
