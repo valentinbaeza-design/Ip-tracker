@@ -53,6 +53,20 @@ async function getAlphaVantagePrice(symbol) {
   return dates.slice(0, 10).map(d => parseFloat(series[d]["4. close"]));
 }
 
+// Cachea por símbolo dentro de esta misma ejecución (alertas + calibración pueden
+// compartir el mismo proxySymbol, ej. dos alertas de NATGAS sobre UNG) — evita
+// pedir el mismo dato varias veces y toparse con el límite de frecuencia del
+// plan gratis de Alpha Vantage (5 peticiones/minuto).
+const alphaVantageCache = {};
+async function getAlphaVantagePriceCached(symbol) {
+  if (!(symbol in alphaVantageCache)) {
+    alphaVantageCache[symbol] = await getAlphaVantagePrice(symbol);
+    // pequeño margen entre peticiones reales (no cacheadas) para no rozar el límite de frecuencia
+    await new Promise(resolve => setTimeout(resolve, 1200));
+  }
+  return alphaVantageCache[symbol];
+}
+
 async function checkCalibrations() {
   if (!fs.existsSync("calibration.json")) {
     console.log("No hay calibration.json en el repo, nada que revisar.");
@@ -67,7 +81,7 @@ async function checkCalibrations() {
 
   for (const cal of calibrations) {
     try {
-      const closes = await getAlphaVantagePrice(cal.proxySymbol);
+      const closes = await getAlphaVantagePriceCached(cal.proxySymbol);
       const daysSince = (Date.now() - new Date(cal.calibratedAt).getTime()) / (1000 * 60 * 60 * 24);
 
       // Detección de posible split: un salto varias veces mayor que el movimiento
@@ -119,7 +133,7 @@ async function buildTrendEvaluationMessage(alert, currentPrice) {
 
   if (alert.proxySymbol && ALPHAVANTAGE_KEY) {
     try {
-      const closes = await getAlphaVantagePrice(alert.proxySymbol); // más reciente primero
+      const closes = await getAlphaVantagePriceCached(alert.proxySymbol); // más reciente primero
       if (closes.length >= 10) {
         const latest = closes[0];
         const past = closes[5]; // ~5 sesiones atrás
