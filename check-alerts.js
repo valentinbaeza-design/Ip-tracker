@@ -1,18 +1,20 @@
 // check-alerts.js
-// Revisa alerts.json (alertas de precio) y calibration.json (calibración proxy↔bróker),
-// y manda avisos a Telegram cuando corresponde.
+// Evaluación periódica (cada 4h) de las alertas de precio: tendencia reciente del proxy
+// y estado de la calibración proxy↔bróker. NO dispara el aviso de "alerta cumplida" —
+// eso lo hace check-trigger.js cada 15 min, con datos más frescos (API Ninjas).
+// Este script es el análisis de fondo, no el guardián rápido.
 //
 // Secrets necesarios en GitHub Actions:
 //   TELEGRAM_BOT_TOKEN   (ya lo tienes del bot de Pools)
 //   TELEGRAM_CHAT_ID     (ya lo tienes del bot de Pools)
-//   OILPRICEAPI_KEY      (para alertas de precio)
-//   ALPHAVANTAGE_KEY     (para revisión de calibración — opcional, se omite si no está)
+//   APININJAS_KEY        (precio actual, mismo que usa check-trigger.js)
+//   ALPHAVANTAGE_KEY     (tendencia del proxy + calibración — opcional, se omite si no está)
 
 import fs from "fs";
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
-const OILPRICEAPI_KEY = process.env.OILPRICEAPI_KEY;
+const APININJAS_KEY = process.env.APININJAS_KEY;
 const ALPHAVANTAGE_KEY = process.env.ALPHAVANTAGE_KEY;
 
 async function sendTelegram(text) {
@@ -27,23 +29,18 @@ async function sendTelegram(text) {
   }
 }
 
-async function getPrice(priceCode) {
-  const url = `https://api.oilpriceapi.com/v1/prices/latest?by_code=${encodeURIComponent(priceCode)}`;
-  const res = await fetch(url, { headers: { Authorization: "Token " + OILPRICEAPI_KEY } });
-  if (!res.ok) throw new Error(`oilpriceapi HTTP ${res.status}`);
-  const json = await res.json();
-  if (json.data && typeof json.data.price === "number") return json.data.price;
-  if (typeof json.price === "number") return json.price;
-  throw new Error("Formato de respuesta no reconocido: " + JSON.stringify(json));
+function priceCodeToApiNinjasName(priceCode) {
+  return priceCode.replace(/_USD$/i, "").toLowerCase();
 }
 
-// Se cumple la alerta si:
-// - COMPRAR: el precio ha bajado hasta el nivel disparador o por debajo (zona de compra alcanzada)
-// - CORTO:   el precio ha subido hasta el nivel disparador o por encima (zona de venta alcanzada)
-function isTriggered(alert, currentPrice) {
-  if (alert.direction === "COMPRAR") return currentPrice <= alert.triggerPrice;
-  if (alert.direction === "CORTO") return currentPrice >= alert.triggerPrice;
-  return false;
+async function getPrice(priceCode) {
+  const name = priceCodeToApiNinjasName(priceCode);
+  const url = `https://api.api-ninjas.com/v1/commodityprice?name=${encodeURIComponent(name)}`;
+  const res = await fetch(url, { headers: { "X-Api-Key": APININJAS_KEY } });
+  if (!res.ok) throw new Error(`API Ninjas HTTP ${res.status}: ${await res.text()}`);
+  const json = await res.json();
+  if (typeof json.price !== "number") throw new Error("Formato de respuesta no reconocido: " + JSON.stringify(json));
+  return json.price;
 }
 
 async function getAlphaVantagePrice(symbol) {
@@ -110,6 +107,56 @@ async function checkCalibrations() {
   }
 }
 
+// ---------- Evaluación de tendencia cuando la alerta NO se cumple todavía ----------
+// En vez de quedarse en silencio, valora si el movimiento reciente favorece o dificulta
+// que se llegue al disparador, y si conviene mantenerlo, acercarlo o dejarlo tal cual.
+async function buildTrendEvaluationMessage(alert, currentPrice) {
+  const distance = alert.direction === "COMPRAR" ? currentPrice - alert.triggerPrice : alert.triggerPrice - currentPrice;
+  const distancePct = (Math.abs(distance) / currentPrice) * 100;
+
+  let trendLine = "";
+  let adviceLine = "Sin datos de tendencia disponibles para esta evaluación (falta proxySymbol o ALPHAVANTAGE_KEY) — la alerta sigue activa igualmente.";
+
+  if (alert.proxySymbol && ALPHAVANTAGE_KEY) {
+    try {
+      const closes = await getAlphaVantagePrice(alert.proxySymbol); // más reciente primero
+      if (closes.length >= 6) {
+        const latest = closes[0];
+        const past = closes[5]; // ~5 sesiones atrás
+        const trendPct = ((latest - past) / past) * 100;
+        trendLine = `Tendencia reciente (${alert.proxySymbol}, ~5 sesiones): ${trendPct >= 0 ? "+" : ""}${trendPct.toFixed(1)}%.`;
+
+        const favorable = alert.direction === "COMPRAR" ? trendPct < -1 : trendPct > 1;
+        const contrary = alert.direction === "COMPRAR" ? trendPct > 1 : trendPct < -1;
+
+        if (favorable) {
+          adviceLine = "El movimiento reciente va en la dirección que tu alerta necesita — parece razonable mantenerla tal cual.";
+        } else if (contrary) {
+          const altTrigger = currentPrice - distance * 0.5;
+          adviceLine =
+            `El movimiento reciente va en dirección contraria a tu alerta — puede tardar más de lo esperado o no cumplirse pronto. ` +
+            `Si prefieres no esperar tanto, podrías considerar un disparador más cercano, aprox. ${altTrigger.toFixed(3)} en lugar del actual (${alert.triggerPrice}). ` +
+            `Sería sustituir esta alerta, no añadir una nueva — decide tú si te compensa asumir un precio de entrada peor a cambio de más probabilidad de que se cumpla pronto, o prefieres mantener la actual y esperar más.`;
+        } else {
+          adviceLine = "Sin tendencia clara en las últimas sesiones — la alerta actual sigue siendo razonable, no hace falta cambiar nada.";
+        }
+      }
+    } catch (e) {
+      console.error(`No se pudo evaluar tendencia de ${alert.instrument}:`, e.message);
+    }
+  }
+
+  let msg = `🔍 <b>Evaluación de alerta — ${alert.instrument}</b>\n\n`;
+  msg += `Dirección: ${alert.direction}\n`;
+  msg += `Disparador: ${alert.triggerPrice}\n`;
+  msg += `Precio actual: ${currentPrice}\n`;
+  msg += `Distancia hasta el disparador: ${distancePct.toFixed(1)}%\n`;
+  if (trendLine) msg += `${trendLine}\n`;
+  msg += `\n👉 ${adviceLine}`;
+  if (alert.note) msg += `\n\nNota original: ${alert.note}`;
+  return msg;
+}
+
 async function main() {
   if (!fs.existsSync("alerts.json")) {
     console.log("No hay alerts.json en el repo, nada que revisar de alertas de precio.");
@@ -133,33 +180,9 @@ async function main() {
         const currentPrice = priceCache[alert.priceCode];
         console.log(`${alert.instrument} (${alert.priceCode}): precio actual ${currentPrice}, disparador ${alert.direction} @ ${alert.triggerPrice}`);
 
-        if (isTriggered(alert, currentPrice)) {
-          const emoji = alert.direction === "COMPRAR" ? "🟢" : "🔴";
-          let setupLines = "";
-          if (alert.precioSL) setupLines += `Stop Loss sugerido: ${alert.precioSL}\n`;
-          if (alert.precioTP) setupLines += `Take Profit sugerido: ${alert.precioTP}\n`;
-          if (alert.apalancamiento) setupLines += `Apalancamiento sugerido: ${alert.apalancamiento}x\n`;
-          if (alert.invertido) setupLines += `Importe sugerido: $${alert.invertido}\n`;
-          let riskLine = "";
-          if (alert.precioSL && alert.invertido) {
-            const distanciaPct = Math.abs(alert.triggerPrice - alert.precioSL) / alert.triggerPrice;
-            const lev = alert.apalancamiento || 1;
-            const maxPerdida = alert.invertido * distanciaPct * lev;
-            riskLine = `Pérdida máxima estimada si salta el SL: $${maxPerdida.toFixed(2)}\n`;
-          }
-          const msg =
-            `${emoji} <b>Alerta de precio cumplida — ${alert.instrument}</b>\n\n` +
-            `Dirección: ${alert.direction}\n` +
-            `Nivel disparador (= entrada sugerida): ${alert.triggerPrice}\n` +
-            `Precio actual: ${currentPrice}\n` +
-            setupLines +
-            riskLine +
-            (alert.note ? `Nota: ${alert.note}\n` : "") +
-            `\n👉 Estos valores son una propuesta guardada por ti mismo en base al análisis previo — revísalos contra el precio real en eToro antes de aplicarlos, no los copies a ciegas.\n` +
-            `Recuerda eliminar o editar esta alerta en alerts.json si actúas, o seguirás recibiendo el aviso en cada revisión mientras siga cumpliéndose.`;
-          await sendTelegram(msg);
-          console.log("Alerta enviada a Telegram.");
-        }
+        const evalMsg = await buildTrendEvaluationMessage(alert, currentPrice);
+        await sendTelegram(evalMsg);
+        console.log("Evaluación de tendencia enviada a Telegram.");
       }
     }
   }
