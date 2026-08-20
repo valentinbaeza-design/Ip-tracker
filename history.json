@@ -488,6 +488,17 @@
         "positionValueUSD": 3.653721319482204,
         "feesValueUSD": 0.009395413634740843,
         "ilPct": -0.07697101929540207
+      },
+      {
+        "t": "2026-08-20T17:05:59.273Z",
+        "inRange": true,
+        "distToLower": 38.8,
+        "distToUpper": 61.2,
+        "totalReturnPct": 20.811871426103412,
+        "priceNow": 25894.656634904914,
+        "positionValueUSD": 3.7472563789553384,
+        "feesValueUSD": 0.009992822396477502,
+        "ilPct": -0.0785468172695869
       }
     ],
     "5759912": [
@@ -1048,6 +1059,17 @@
         "positionValueUSD": 69.84268560791297,
         "feesValueUSD": 0.015756280513143223,
         "ilPct": -0.0007604191383014935
+      },
+      {
+        "t": "2026-08-20T17:05:59.273Z",
+        "inRange": true,
+        "distToLower": 51.6,
+        "distToUpper": 48.4,
+        "totalReturnPct": 1.306345070779642,
+        "priceNow": 2342.595307909483,
+        "positionValueUSD": 70.70107122556419,
+        "feesValueUSD": 0.05128017186830676,
+        "ilPct": -0.004999291762608493
       }
     ]
   }
