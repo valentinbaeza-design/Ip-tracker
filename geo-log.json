@@ -7,6 +7,13 @@
         "content": "- [28 feb 2026] EEUU e Israel atacan Irán → Irán cierra el Estrecho de Ormuz → crisis global de GNL\n- [19 mar 2026] EEUU inicia campaña aérea militar para reapertura del Estrecho de Ormuz\n- [13 abr 2026] EEUU impone bloqueo naval a puertos iraníes tras fracaso de negociaciones en Islamabad\n- [7 jul 2026] Se reanudan ataques a buques en Hormuz → precios internacionales de gas suben a máximos de abril\n- [17 jun 2026] Trump y Pezeshkian firman MOU en Versalles: paso libre por Hormuz durante 60 días\n- [~jul 2026] MOU se rompe de facto; estrecho vuelve a colapso operativo (~10 barcos/día vs 88-130 antes de la crisis)\n- [18 ago 2026] El plazo de 60 días del MOU expira sin acuerdo ni prórroga; negociaciones en impasse\n- [Mar-jun 2026] GNL de Qatar y EAU cayó ~80% respecto a mismo período 2025\n- [Ago 2026] Producción US Lower 48 alcanza récord de 111,6 bcfd; almacenamiento 198 Bcf sobre media 5 años\n- [10 jul 2026] Inicio mantenimiento Freeport LNG, afecta 2,0 Bcf/d hasta finales de agosto\n- [13 ago 2026] Gas europeo TTF cotiza ~63 EUR/MWh, +98% vs agosto 2025\n- [13 ago 2026] Alemania: almacenamiento en 47,28% (vs 65,45% año anterior); objetivo 70% al 1-nov-2026",
         "auto": true,
         "source": "github-actions"
+      },
+      {
+        "id": "1787219639155-geo",
+        "savedAt": "2026-08-20T09:53:59.155Z",
+        "content": "- [Mar 2026] Cierre Estrecho de Ormuz al tráfico comercial de LNG; fuerza mayor de QatarEnergy (~20% suministro global LNG bloqueado)\n- [Abr 21-22, 2026] Intento fallido de reapertura del Estrecho de Ormuz, colapsó en <24h\n- [7 jul 2026] Reactivación de ataques a buques en Ormuz; precios internacionales LNG suben a máximos desde abril\n- [26 ene 2026] UE adopta formalmente Reglamento EU/261/2026 de eliminación gradual del gas ruso\n- [1 mar 2026] Inicio REPower Gas Regulation; ban parcial sobre LNG ruso de corto plazo desde 25 abr 2026\n- [Ago 2026] Producción US gas record: 111,6 bcfd Lower 48, superando récord julio 110,7 bcfd\n- [Ago 2026] Henry Hub ~$2,68/MMBtu; TTF ~63 EUR/MWh (+98% interanual)\n- [Ene 2026] Henry Hub marcó máximo histórico mensual de $7,72/MMBtu (vórtice polar)\n- [1 ene 2027] Ban completo UE a LNG ruso (fecha legal confirmada)\n- [30 sep 2027] Ban completo UE a gas ruso por gasoducto (fecha legal confirmada)\n- [10 jul 2026] Inicio mantenimiento Freeport LNG (~2,0 Bcf/d afectados); fin esperado finales de agosto 2026\n- [9 sep 2026] Próximo EIA Short-Term Energy Outlook (STEO)",
+        "auto": true,
+        "source": "github-actions"
       }
     ]
   }
