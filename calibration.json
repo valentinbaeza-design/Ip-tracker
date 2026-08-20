@@ -6,6 +6,13 @@
       "ratio": 0.27542457542457544,
       "calibratedAt": "2026-08-20T16:01:23.427Z",
       "maxDaysBeforeReminder": 14
+    },
+    {
+      "instrument": "ORO",
+      "proxySymbol": "GLD",
+      "ratio": 10.889715832205685,
+      "calibratedAt": "2026-08-20T16:31:59.467Z",
+      "maxDaysBeforeReminder": 14
     }
   ]
 }
