@@ -6,9 +6,17 @@
       "rpc": "https://mainnet.base.org",
       "positionManager": "0x03a520b32C04BF3bEEf7BEb72E919cf822Ed34f1",
       "factory": "0x33128a8fC17869897dcE68Ed026d694621f6FDfD",
+      "chainSlug": "base",
       "initialUSD": 69.84,
       "openedAt": "2026-08-20T00:00:00.000Z",
-      "note": "Posición consolidada: reemplaza a #5759912 (rango ancho) y #5786604 (rango estrecho), cerradas el 20/08/2026. Rango 1935.31–2724.41."
+      "feeTierLabel": "0.3%",
+      "rangeMin": 1935.31,
+      "rangeMax": 2724.41,
+      "priceMode": "direct",
+      "priceSymbols": [
+        "ETHUSDT"
+      ],
+      "analysisSymbol": "ETHUSDT"
     },
     {
       "label": "WETH/ARB · Arbitrum",
@@ -16,8 +24,18 @@
       "rpc": "https://arb1.arbitrum.io/rpc",
       "positionManager": "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
       "factory": "0x1F98431c8aD98523631AE4a59f267346ea31F984",
+      "chainSlug": "arbitrum",
       "initialUSD": 3.11,
-      "note": "Sin fecha/precio de entrada exacto registrado — IL es aproximado"
+      "note": "Sin fecha/precio de entrada exacto registrado — IL es aproximado",
+      "feeTierLabel": "0.3%",
+      "rangeMin": 11962,
+      "rangeMax": 47832,
+      "priceMode": "ratio",
+      "priceSymbols": [
+        "ETHUSDT",
+        "ARBUSDT"
+      ],
+      "analysisSymbol": "ARBUSDT"
     }
   ]
 }
