@@ -335,7 +335,8 @@ async function main() {
       positionValueUSD: r.positionValueUSD,
       feesValueUSD: r.feesValueUSD,
       ilPct: r.ilPct,
-      vsHoldUSD: r.vsHoldUSD
+      vsHoldUSD: r.vsHoldUSD,
+      entryPriceUsed: !!r.entryPrice
     });
   });
   saveHistory(history);
