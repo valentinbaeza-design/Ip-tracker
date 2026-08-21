@@ -253,23 +253,44 @@ function buildPositionMessage(r, now) {
   const valueLine = r.positionValueUSD !== null
     ? `Valor actual: $${r.positionValueUSD.toFixed(2)} · Fees ganadas: $${r.feesValueUSD.toFixed(2)}\nRendimiento total: ${r.totalReturnPct.toFixed(1)}%`
     : `Fees ganadas: ${r.fee0Human.toFixed(6)} ${r.sym0} + ${r.fee1Human.toFixed(6)} ${r.sym1} (sin precio USD disponible)`;
-  const ilLine = r.ilPct !== null ? `IL aprox. vs entrada: ${r.ilPct.toFixed(2)}% · vs hold 50/50: ${r.vsHoldUSD >= 0 ? "+" : ""}$${r.vsHoldUSD.toFixed(2)}` : "";
 
-  let msg = `${icon} *${r.label}* — ${now}\n${status} — ${r.sym1}/${r.sym0}: ${r.priceNow.toFixed(4)}\nMargen: ${r.distToLower}% / ${r.distToUpper}%\n${valueLine}\n${ilLine}\n👉 ${r.suggestion.text}`;
+  const entryLine = r.entryPrice
+    ? `${r.entryPrice.toFixed(4)} (real)`
+    : `${Math.sqrt(r.priceMin * r.priceMax).toFixed(4)} (aprox., centro del rango — sin entrada real registrada)`;
+  const openedDateStr = r.openedAt ? new Date(r.openedAt).toLocaleDateString("es-ES") : "fecha no registrada";
 
-  const action = r.suggestion.action;
-  if (action) {
-    msg += `\n\n*Pasos para reequilibrar:*\n`;
-    msg += `1️⃣ Cierra/retira la posición actual: revisa tu lista en ${action.closeUrl}, busca "*${r.label}*" (NFT #${r.tokenId}) y pulsa en ella → retirar liquidez.\n`;
-    if (action.openUrl) {
-      msg += `2️⃣ Abre la nueva posición aquí: ${action.openUrl}\n`;
-      msg += `3️⃣ Al elegir el rango, usa los botones +/- (nunca escribas el precio directamente) hasta acercarte a: *${action.targetMin.toFixed(4)} – ${action.targetMax.toFixed(4)}*.\n`;
+  let msg = `${icon} *${r.label}* — ${now}\n${status} — ${r.sym1}/${r.sym0}: ${r.priceNow.toFixed(4)}\nRango: ${r.priceMin.toFixed(4)} – ${r.priceMax.toFixed(4)} · Entrada: ${entryLine}\nDepósito inicial: $${r.initialUSD.toFixed(2)} (${openedDateStr})\nMargen: ${r.distToLower}% / ${r.distToUpper}%\n${valueLine}`;
+
+  // Desglose: cuánto de la ganancia viene genuinamente de ser LP (fees - IL) vs. solo del
+  // movimiento de precio (esto último lo habrías ganado igual con solo holdear los tokens).
+  const sign = (v) => v >= 0 ? "+" : "";
+  const fmt = (v) => (v >= 0 ? "+" : "-") + "$" + Math.abs(v).toFixed(2);
+  if (r.positionValueUSD !== null && r.vsHoldUSD !== null) {
+    const gainUSD = r.positionValueUSD + r.feesValueUSD - r.initialUSD;
+    const priceOnlyUSD = gainUSD - r.vsHoldUSD;
+    const daysTracked = r.openedAt ? (Date.now() - new Date(r.openedAt).getTime()) / (1000 * 60 * 60 * 24) : null;
+    const vsHoldPct = r.initialUSD > 0 ? (r.vsHoldUSD / r.initialUSD) * 100 : null;
+    const priceOnlyPct = r.initialUSD > 0 ? (priceOnlyUSD / r.initialUSD) * 100 : null;
+    const pctStr = (p) => p !== null ? ` (${p >= 0 ? "+" : ""}${p.toFixed(1)}%)` : "";
+
+    msg += `\n\nvs Hold: ${fmt(r.vsHoldUSD)}${pctStr(vsHoldPct)}`;
+    msg += `\n📊 *Desglose*${daysTracked !== null ? ` (${daysTracked.toFixed(1)} días)` : ""}: de ${fmt(gainUSD)} totales (Valor actual $${r.positionValueUSD.toFixed(2)} + Fees $${r.feesValueUSD.toFixed(2)} − Depósito $${r.initialUSD.toFixed(2)}) → ${fmt(r.vsHoldUSD)}${pctStr(vsHoldPct)} por ser LP (fees − IL) · ${fmt(priceOnlyUSD)}${pctStr(priceOnlyPct)} solo por movimiento de precio.`;
+
+    // Proyección a un importe de referencia (1.000€), escalando linealmente el mismo desglose.
+    const REF_AMOUNT = 1000;
+    if (r.initialUSD > 0) {
+      const factor = REF_AMOUNT / r.initialUSD;
+      const gainScaled = gainUSD * factor;
+      const vsHoldScaled = r.vsHoldUSD * factor;
+      const priceOnlyScaled = priceOnlyUSD * factor;
+      msg += `\n💡 Con ${REF_AMOUNT}€ en vez de $${r.initialUSD.toFixed(2)}: ganancia aprox. ${fmt(gainScaled)} (${fmt(vsHoldScaled)} LP · ${fmt(priceOnlyScaled)} precio). Estimación lineal simple — el gas pesa menos proporcionalmente con más capital, así que lo real tendería a ser algo mejor que esto.`;
     }
-    msg += `\n⚠️ Verifica red y direcciones de contrato antes de firmar. Esto es una propuesta calculada, no una instrucción a ciegas — decide tú si te compensa el gas y el mantenimiento extra.`;
   }
 
+  msg += `\n👉 ${r.suggestion.text}`;
+
   if (r.ilPct !== null && !r.entryPrice) {
-    msg += `\n\n_IL y comparativa vs hold son aproximados (sin precio de entrada exacto registrado)._`;
+    msg += `\n\n_vs hold es aproximado (sin precio de entrada exacto registrado)._`;
   }
   return msg;
 }
