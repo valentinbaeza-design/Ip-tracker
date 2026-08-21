@@ -131,7 +131,7 @@ async function checkPosition(cfg) {
   return {
     label: cfg.label, tokenId: String(cfg.tokenId), inRange, sym0, sym1, priceNow, priceMin, priceMax,
     distToLower, distToUpper, amount0Human, amount1Human, fee0Human, fee1Human,
-    initialUSD: cfg.initialUSD, openedAt: cfg.openedAt || null,
+    initialUSD: cfg.initialUSD, openedAt: cfg.openedAt || null, entryPrice: cfg.entryPrice || null,
     otherTokenAddress, feeTierBps, chainSlug
   };
 }
@@ -268,7 +268,9 @@ function buildPositionMessage(r, now) {
     msg += `\n⚠️ Verifica red y direcciones de contrato antes de firmar. Esto es una propuesta calculada, no una instrucción a ciegas — decide tú si te compensa el gas y el mantenimiento extra.`;
   }
 
-  msg += `\n\n_IL y comparativa vs hold son aproximados (sin precio de entrada exacto registrado)._`;
+  if (r.ilPct !== null && !r.entryPrice) {
+    msg += `\n\n_IL y comparativa vs hold son aproximados (sin precio de entrada exacto registrado)._`;
+  }
   return msg;
 }
 
@@ -306,7 +308,7 @@ async function main() {
       feesValueUSD = r.fee0Human * p0 + r.fee1Human * p1;
       totalReturnPct = ((positionValueUSD + feesValueUSD - r.initialUSD) / r.initialUSD) * 100;
 
-      const entryApprox = Math.sqrt(r.priceMin * r.priceMax);
+      const entryApprox = r.entryPrice || Math.sqrt(r.priceMin * r.priceMax);
       const ratio = r.priceNow / entryApprox;
       ilPct = (2 * Math.sqrt(ratio) / (1 + ratio) - 1) * 100;
       const holdValueUSD = r.initialUSD * (0.5 + 0.5 * ratio);
