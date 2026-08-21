@@ -9,6 +9,8 @@
             "chainSlug": "base",
             "initialUSD": 69.84,
             "openedAt": "2026-08-20T00:00:00.000Z",
+            "entryPrice": 2274,
+            "note": "Precio de entrada real, visto en pantalla en Uniswap justo antes de confirmar la creación de esta posición (2274 USDC/WETH). Fecha aproximada al día, hora no verificada con exactitud.",
             "feeTierLabel": "0.3%",
             "rangeMin": 1935.31,
             "rangeMax": 2724.41,
