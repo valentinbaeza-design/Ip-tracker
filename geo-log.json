@@ -14,6 +14,13 @@
         "content": "- [Mar 2026] Cierre Estrecho de Ormuz al tráfico comercial de LNG; fuerza mayor de QatarEnergy (~20% suministro global LNG bloqueado)\n- [Abr 21-22, 2026] Intento fallido de reapertura del Estrecho de Ormuz, colapsó en <24h\n- [7 jul 2026] Reactivación de ataques a buques en Ormuz; precios internacionales LNG suben a máximos desde abril\n- [26 ene 2026] UE adopta formalmente Reglamento EU/261/2026 de eliminación gradual del gas ruso\n- [1 mar 2026] Inicio REPower Gas Regulation; ban parcial sobre LNG ruso de corto plazo desde 25 abr 2026\n- [Ago 2026] Producción US gas record: 111,6 bcfd Lower 48, superando récord julio 110,7 bcfd\n- [Ago 2026] Henry Hub ~$2,68/MMBtu; TTF ~63 EUR/MWh (+98% interanual)\n- [Ene 2026] Henry Hub marcó máximo histórico mensual de $7,72/MMBtu (vórtice polar)\n- [1 ene 2027] Ban completo UE a LNG ruso (fecha legal confirmada)\n- [30 sep 2027] Ban completo UE a gas ruso por gasoducto (fecha legal confirmada)\n- [10 jul 2026] Inicio mantenimiento Freeport LNG (~2,0 Bcf/d afectados); fin esperado finales de agosto 2026\n- [9 sep 2026] Próximo EIA Short-Term Energy Outlook (STEO)",
         "auto": true,
         "source": "github-actions"
+      },
+      {
+        "id": "1787306175262-geo",
+        "savedAt": "2026-08-21T09:56:15.262Z",
+        "content": "- [28 Feb 2026] EE.UU. e Israel atacan Irán → Irán cierra Estrecho de Hormuz, interrupción del 20% del LNG mundial\n- [Mar 2026] QatarEnergy declara fuerza mayor en exportaciones LNG tras ataques a Ras Laffan\n- [7 Jul 2026] Reanudación de ataques a buques en Hormuz → precios LNG internacionales suben a máximos de abril\n- [13 Abr 2026] EE.UU. impone bloqueo naval a Irán tras fracaso de negociaciones en Islamabad\n- [17 Jun 2026] MOU EE.UU.-Irán: paso seguro de buques por 60 días; bloqueo naval levantado temporalmente\n- [Ago 2026] Producción gas Lower 48 EE.UU.: 111,6 bcfd, récord histórico mensual\n- [13 Ago 2026] EIA storage: 3.153 Bcf, +6,7% sobre media 5 años → presión bajista HH\n- [20 Ago 2026] EIA storage: 3.169 Bcf, +16 Bcf (por debajo de lo esperado), 185 Bcf sobre media 5 años\n- [20 Ago 2026] TTF (gas europeo): 65,33 EUR/MWh, +97% interanual\n- [Nov 2027] Límite legal para el phaseout del gas ruso en la UE (decisión ya tomada)",
+        "auto": true,
+        "source": "github-actions"
       }
     ]
   }
