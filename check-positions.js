@@ -391,27 +391,6 @@ function buildSuggestion(r, positionHistory) {
   return { text: msgs.join(" "), action };
 }
 
-// Ritmo diario reciente (real), a partir del historial guardado — para comparar con la media
-// de todo el periodo y ver si la tendencia se acelera, frena, o se mantiene coherente.
-function computeRecentDailyRates(positionHistory, r, windowDays = 7) {
-  const withVal = positionHistory.filter(h => typeof h.positionValueUSD === "number" && typeof h.feesValueUSD === "number" && typeof h.vsHoldUSD === "number");
-  if (withVal.length < 2) return null;
-  const latest = withVal[withVal.length - 1];
-  const latestTime = new Date(latest.t).getTime();
-  const cutoff = latestTime - windowDays * 24 * 60 * 60 * 1000;
-  const inWindow = withVal.filter(h => new Date(h.t).getTime() >= cutoff);
-  const reference = inWindow.length >= 2 ? inWindow[0] : withVal[0];
-  const daysSpan = (latestTime - new Date(reference.t).getTime()) / (1000 * 60 * 60 * 24);
-  if (daysSpan <= 0) return null;
-  const gainNow = latest.positionValueUSD + latest.feesValueUSD - r.initialUSD;
-  const gainRef = reference.positionValueUSD + reference.feesValueUSD - r.initialUSD;
-  return {
-    daysSpan,
-    gainRate: (gainNow - gainRef) / daysSpan,
-    vsHoldRate: (latest.vsHoldUSD - reference.vsHoldUSD) / daysSpan
-  };
-}
-
 function buildPositionMessage(r, now, positionHistory, mc) {
   if (r.error) return `⚠️ *${r.label}*\n${now}\nError leyendo datos: ${r.error}`;
 
@@ -443,34 +422,18 @@ function buildPositionMessage(r, now, positionHistory, mc) {
     msg += `\n\nvs Hold: ${fmt(r.vsHoldUSD)}${pctStr(vsHoldPct)}`;
     msg += `\n📊 *Desglose*${daysTracked !== null ? ` (${daysTracked.toFixed(1)} días)` : ""}: de ${fmt(gainUSD)} totales (Valor actual $${r.positionValueUSD.toFixed(2)} + Fees $${r.feesValueUSD.toFixed(2)} − Depósito $${r.initialUSD.toFixed(2)}) → ${fmt(r.vsHoldUSD)}${pctStr(vsHoldPct)} por ser LP (fees − IL) · ${fmt(priceOnlyUSD)}${pctStr(priceOnlyPct)} solo por movimiento de precio.`;
 
-    // Proyección a un importe de referencia (1.000€), escalando linealmente el mismo desglose.
+    // Proyección a un importe de referencia (1.000€), escalando linealmente el mismo desglose
+    // YA OBSERVADO (mismo periodo real, sin extrapolar en el tiempo — por eso es fiable).
     const REF_AMOUNT = 1000;
     if (r.initialUSD > 0) {
       const factor = REF_AMOUNT / r.initialUSD;
       const gainScaled = gainUSD * factor;
       const vsHoldScaled = r.vsHoldUSD * factor;
       const priceOnlyScaled = priceOnlyUSD * factor;
-      msg += `\n💡 Con ${REF_AMOUNT}€ en vez de $${r.initialUSD.toFixed(2)}: ganancia aprox. ${fmt(gainScaled)} (${fmt(vsHoldScaled)} LP · ${fmt(priceOnlyScaled)} precio). Estimación lineal simple — el gas pesa menos proporcionalmente con más capital, así que lo real tendería a ser algo mejor que esto.`;
-
-      // Proyección adicional: mismo ritmo diario, extrapolado a 30 días, con el mismo capital de referencia.
-      const PROJECTION_DAYS = 30;
-      if (daysTracked !== null && daysTracked > 0) {
-        const gain30 = (gainUSD / daysTracked) * PROJECTION_DAYS * factor;
-        const vsHold30 = (r.vsHoldUSD / daysTracked) * PROJECTION_DAYS * factor;
-        const priceOnly30 = (priceOnlyUSD / daysTracked) * PROJECTION_DAYS * factor;
-        msg += `\n📅 Si este ritmo diario (media de TODO el historial) se mantuviera ${PROJECTION_DAYS} días (con ${REF_AMOUNT}€): ${fmt(gain30)} (${fmt(vsHold30)} LP · ${fmt(priceOnly30)} precio). Extrapolación ingenua, no una predicción — la parte de fees (LP) es algo más estable en el tiempo, pero la parte de movimiento de precio es esencialmente aleatoria y podría revertirse por completo.`;
-
-        // Contraste con el ritmo REAL de los últimos días (no solo la media de todo el periodo),
-        // para ver si la tendencia se acelera, frena, o es coherente — usando el historial guardado.
-        const recent = computeRecentDailyRates(positionHistory || [], r);
-        if (recent && recent.daysSpan >= 1) {
-          const gain30Recent = recent.gainRate * PROJECTION_DAYS * factor;
-          const vsHold30Recent = recent.vsHoldRate * PROJECTION_DAYS * factor;
-          const diffPct = gain30 !== 0 ? ((gain30Recent - gain30) / Math.abs(gain30)) * 100 : null;
-          const trendWord = diffPct === null ? "" : diffPct > 15 ? " (acelerándose 📈)" : diffPct < -15 ? " (frenándose 📉)" : " (similar a la media)";
-          msg += `\n🔍 Con el ritmo real de los últimos ${recent.daysSpan.toFixed(1)} días en vez de la media de todo el historial${trendWord}: ${fmt(gain30Recent)} (${fmt(vsHold30Recent)} LP). Esta cifra pesa más lecturas recientes reales (hay ${(positionHistory || []).length} guardadas) y por eso suele estar más "acorde a la realidad vivida" que la media de todo el periodo — pero sigue sin ser una predicción.`;
-        }
-      }
+      msg += `\n💡 Con ${REF_AMOUNT}€ en vez de $${r.initialUSD.toFixed(2)}: ganancia aprox. ${fmt(gainScaled)} (${fmt(vsHoldScaled)} LP · ${fmt(priceOnlyScaled)} precio). Estimación lineal simple del mismo periodo ya vivido (no una proyección a futuro) — el gas pesa menos proporcionalmente con más capital, así que lo real tendería a ser algo mejor que esto.`;
+      // Nota: aquí ya NO se extrapola linealmente a 30 días — esa parte del mensaje se
+      // sustituyó por la simulación Montecarlo de abajo, que sí modela la incertidumbre
+      // en vez de proyectar un ritmo corto de forma ingenua (ver conversación del 22/8).
     }
   }
 
