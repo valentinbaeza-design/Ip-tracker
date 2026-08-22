@@ -652,6 +652,19 @@
         "ilPct": -0.02782052157267456,
         "vsHoldUSD": 0.8057248353020188,
         "entryPriceUsed": true
+      },
+      {
+        "t": "2026-08-22T03:07:53.384Z",
+        "inRange": true,
+        "distToLower": 35.2,
+        "distToUpper": 64.8,
+        "totalReturnPct": 33.9068625270228,
+        "priceNow": 24589.984471127795,
+        "positionValueUSD": 4.149620482475536,
+        "feesValueUSD": 0.014882942114872878,
+        "ilPct": -0.008634475673596764,
+        "vsHoldUSD": 1.013091174616347,
+        "entryPriceUsed": true
       }
     ],
     "5759912": [
@@ -1375,6 +1388,19 @@
         "feesValueUSD": 0.24110160191341307,
         "ilPct": -0.05934016532577191,
         "vsHoldUSD": -0.24645448482242216,
+        "entryPriceUsed": true
+      },
+      {
+        "t": "2026-08-22T03:07:53.384Z",
+        "inRange": true,
+        "distToLower": 73.2,
+        "distToUpper": 26.8,
+        "totalReturnPct": 4.2399376773490225,
+        "priceNow": 2512.695084502019,
+        "positionValueUSD": 72.49321656071619,
+        "feesValueUSD": 0.30795591314437243,
+        "ilPct": -0.12441010757600068,
+        "vsHoldUSD": -0.7042771087298121,
         "entryPriceUsed": true
       }
     ]
