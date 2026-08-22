@@ -69,10 +69,37 @@ const MC_HISTORY_DAYS = 500; // ~1.5 años de histórico diario real para estima
 const MC_EWMA_HALFLIFE_DAYS = 60; // los días recientes pesan más que los antiguos al elegir qué bloque remuestrear
 
 async function fetchBinanceDailyCloses(symbol, limit) {
-  const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1d&limit=${limit}`);
+  // api.binance.com bloquea peticiones desde centros de datos de EE.UU. (HTTP 451) —
+  // GitHub Actions corre ahí. data-api.binance.vision es el mismo servicio de datos
+  // públicos de mercado, sin esa restricción geográfica.
+  const res = await fetch(`https://data-api.binance.vision/api/v3/klines?symbol=${symbol}&interval=1d&limit=${limit}`);
   if (!res.ok) throw new Error(`Binance klines ${symbol}: HTTP ${res.status}`);
   const data = await res.json();
   return data.map(k => parseFloat(k[4])); // índice 4 = precio de cierre
+}
+
+// Respaldo si Binance (cualquiera de los dos dominios) fallara: CoinGecko, con el mismo
+// símbolo traducido a su id de moneda.
+const COINGECKO_ID_BY_BASE = { ETH: "ethereum", WETH: "ethereum", ARB: "arbitrum", BTC: "bitcoin", USDC: "usd-coin" };
+function binanceSymbolToCoinGeckoId(symbol) {
+  const base = symbol.replace(/USDT$|USDC$|BUSD$/, "");
+  return COINGECKO_ID_BY_BASE[base] || null;
+}
+async function fetchCoinGeckoDailyCloses(symbol, days) {
+  const id = binanceSymbolToCoinGeckoId(symbol);
+  if (!id) throw new Error(`Sin id de CoinGecko para ${symbol}`);
+  const res = await fetch(`https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=${days}`);
+  if (!res.ok) throw new Error(`CoinGecko market_chart ${symbol}: HTTP ${res.status}`);
+  const data = await res.json();
+  return (data.prices || []).map(p => p[1]);
+}
+async function fetchDailyClosesWithFallback(symbol, limit) {
+  try {
+    return await fetchBinanceDailyCloses(symbol, limit);
+  } catch (e) {
+    console.error(`Binance falló para ${symbol} (${e.message}), probando CoinGecko como respaldo…`);
+    return await fetchCoinGeckoDailyCloses(symbol, limit);
+  }
 }
 
 // Construye la serie histórica diaria del RATIO tal como se usa en la posición (mismas
@@ -82,8 +109,8 @@ async function fetchRatioHistory(cfg, limit = MC_HISTORY_DAYS) {
   if (cfg.priceMode === "ratio" && cfg.priceSymbols.length === 2) {
     const [symA, symB] = cfg.priceSymbols; // ej. ["ETHUSDT", "ARBUSDT"] -> ratio = A/B (ARB por WETH)
     const [closesA, closesB] = await Promise.all([
-      fetchBinanceDailyCloses(symA, limit),
-      fetchBinanceDailyCloses(symB, limit)
+      fetchDailyClosesWithFallback(symA, limit),
+      fetchDailyClosesWithFallback(symB, limit)
     ]);
     const n = Math.min(closesA.length, closesB.length);
     const ratios = [];
@@ -92,7 +119,7 @@ async function fetchRatioHistory(cfg, limit = MC_HISTORY_DAYS) {
   }
   // Modo "direct": un solo símbolo sirve directamente como el ratio (ej. ETHUSDT ~ USDC/WETH,
   // porque USDC vale ~1 USD).
-  return await fetchBinanceDailyCloses(cfg.priceSymbols[0], limit);
+  return await fetchDailyClosesWithFallback(cfg.priceSymbols[0], limit);
 }
 
 function dailyReturnsFromCloses(closes) {
