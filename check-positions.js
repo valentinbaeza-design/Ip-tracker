@@ -55,6 +55,125 @@ async function getUsdPrices(symbols) {
   }
 }
 
+// ---------- Simulación Montecarlo: probabilidad de tocar el rango en N días ----------
+// Diseño (ver conversación): la media histórica es difícil de estimar de forma fiable con
+// pocos datos, así que el escenario PRINCIPAL asume que no hay ninguna ventaja direccional
+// conocida (se centra la media a 0), y solo se usa el histórico real para la forma/tamaño
+// de los movimientos (volatilidad). Aparte, como añadido opcional y claramente distinto, se
+// muestra qué pasaría si la tendencia reciente observada continuara — una apuesta
+// direccional explícita, no una probabilidad neutral.
+const MC_DAYS = 30;
+const MC_SIMULATIONS = 5000;
+const MC_BLOCK_SIZE = 5; // remuestrea bloques de 5 días seguidos, no días sueltos (conserva algo de la agrupación real de volatilidad)
+const MC_HISTORY_DAYS = 500; // ~1.5 años de histórico diario real para estimar la volatilidad
+const MC_EWMA_HALFLIFE_DAYS = 60; // los días recientes pesan más que los antiguos al elegir qué bloque remuestrear
+
+async function fetchBinanceDailyCloses(symbol, limit) {
+  const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1d&limit=${limit}`);
+  if (!res.ok) throw new Error(`Binance klines ${symbol}: HTTP ${res.status}`);
+  const data = await res.json();
+  return data.map(k => parseFloat(k[4])); // índice 4 = precio de cierre
+}
+
+// Construye la serie histórica diaria del RATIO tal como se usa en la posición (mismas
+// unidades que priceNow), a partir de priceMode/priceSymbols ya presentes en config.json.
+async function fetchRatioHistory(cfg, limit = MC_HISTORY_DAYS) {
+  if (!cfg.priceSymbols || cfg.priceSymbols.length === 0) return null;
+  if (cfg.priceMode === "ratio" && cfg.priceSymbols.length === 2) {
+    const [symA, symB] = cfg.priceSymbols; // ej. ["ETHUSDT", "ARBUSDT"] -> ratio = A/B (ARB por WETH)
+    const [closesA, closesB] = await Promise.all([
+      fetchBinanceDailyCloses(symA, limit),
+      fetchBinanceDailyCloses(symB, limit)
+    ]);
+    const n = Math.min(closesA.length, closesB.length);
+    const ratios = [];
+    for (let i = 0; i < n; i++) ratios.push(closesA[i] / closesB[i]);
+    return ratios;
+  }
+  // Modo "direct": un solo símbolo sirve directamente como el ratio (ej. ETHUSDT ~ USDC/WETH,
+  // porque USDC vale ~1 USD).
+  return await fetchBinanceDailyCloses(cfg.priceSymbols[0], limit);
+}
+
+function dailyReturnsFromCloses(closes) {
+  const returns = [];
+  for (let i = 1; i < closes.length; i++) {
+    if (closes[i - 1] > 0) returns.push((closes[i] - closes[i - 1]) / closes[i - 1]);
+  }
+  return returns;
+}
+
+// Elige un índice de inicio de bloque con más probabilidad cuanto más reciente sea
+// (ponderación EWMA), en vez de que todos los tramos del histórico pesen lo mismo.
+function pickWeightedBlockStart(nReturns, blockSize, halflifeDays) {
+  const maxInicio = nReturns - blockSize;
+  if (maxInicio <= 0) return 0;
+  const lambda = Math.log(2) / halflifeDays;
+  // Peso acumulado: los índices más recientes (más altos) pesan más.
+  const pesos = [];
+  let total = 0;
+  for (let i = 0; i <= maxInicio; i++) {
+    const antiguedad = maxInicio - i; // 0 = el más reciente
+    const peso = Math.exp(-lambda * antiguedad);
+    total += peso;
+    pesos.push(total);
+  }
+  const r = Math.random() * total;
+  // Búsqueda simple (el array ya está ordenado ascendente)
+  let lo = 0, hi = pesos.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (pesos[mid] < r) lo = mid + 1; else hi = mid;
+  }
+  return lo;
+}
+
+function bootstrapMontecarlo(returns, dias, nSims, priceStart, rangeMin, rangeMax, blockSize, halflifeDays) {
+  const finales = [];
+  let tocaArriba = 0, tocaAbajo = 0;
+  for (let sim = 0; sim < nSims; sim++) {
+    let precio = priceStart, arriba = false, abajo = false, diasSimulados = 0;
+    while (diasSimulados < dias) {
+      const inicio = pickWeightedBlockStart(returns.length, blockSize, halflifeDays);
+      for (let j = 0; j < blockSize && diasSimulados < dias; j++, diasSimulados++) {
+        precio = precio * (1 + returns[inicio + j]);
+        if (precio >= rangeMax) arriba = true;
+        if (precio <= rangeMin) abajo = true;
+      }
+    }
+    finales.push((precio - priceStart) / priceStart * 100);
+    if (arriba) tocaArriba++;
+    if (abajo) tocaAbajo++;
+  }
+  finales.sort((a, b) => a - b);
+  const percentil = (p) => finales[Math.min(finales.length - 1, Math.floor(finales.length * p))];
+  return {
+    pTocaArriba: tocaArriba / nSims,
+    pTocaAbajo: tocaAbajo / nSims,
+    p10: percentil(0.10), p50: percentil(0.50), p90: percentil(0.90)
+  };
+}
+
+// Calcula ambos escenarios (neutro por defecto + tendencia observada como añadido opcional)
+// para una posición, usando histórico real de Binance. Si algo falla (símbolo no
+// reconocido, error de red), devuelve null y el mensaje simplemente omite este bloque.
+async function computeMonteCarloScenarios(cfg, priceNow, rangeMin, rangeMax) {
+  try {
+    const closes = await fetchRatioHistory(cfg);
+    if (!closes || closes.length < MC_BLOCK_SIZE * 4) return null; // muy poco histórico para que tenga sentido
+    const returns = dailyReturnsFromCloses(closes);
+    const media = returns.reduce((a, b) => a + b, 0) / returns.length;
+    const returnsNeutros = returns.map(r => r - media); // fuerza dirección neutra, conserva la forma/volatilidad real
+
+    const neutro = bootstrapMontecarlo(returnsNeutros, MC_DAYS, MC_SIMULATIONS, priceNow, rangeMin, rangeMax, MC_BLOCK_SIZE, MC_EWMA_HALFLIFE_DAYS);
+    const tendencia = bootstrapMontecarlo(returns, MC_DAYS, MC_SIMULATIONS, priceNow, rangeMin, rangeMax, MC_BLOCK_SIZE, MC_EWMA_HALFLIFE_DAYS);
+    return { neutro, tendencia, diasHistorico: returns.length };
+  } catch (e) {
+    console.error(`Montecarlo omitido (${cfg.label}): ${e.message}`);
+    return null;
+  }
+}
+
 // ---------- Historial persistente ----------
 function loadHistory() {
   try {
@@ -245,7 +364,28 @@ function buildSuggestion(r, positionHistory) {
   return { text: msgs.join(" "), action };
 }
 
-function buildPositionMessage(r, now) {
+// Ritmo diario reciente (real), a partir del historial guardado — para comparar con la media
+// de todo el periodo y ver si la tendencia se acelera, frena, o se mantiene coherente.
+function computeRecentDailyRates(positionHistory, r, windowDays = 7) {
+  const withVal = positionHistory.filter(h => typeof h.positionValueUSD === "number" && typeof h.feesValueUSD === "number" && typeof h.vsHoldUSD === "number");
+  if (withVal.length < 2) return null;
+  const latest = withVal[withVal.length - 1];
+  const latestTime = new Date(latest.t).getTime();
+  const cutoff = latestTime - windowDays * 24 * 60 * 60 * 1000;
+  const inWindow = withVal.filter(h => new Date(h.t).getTime() >= cutoff);
+  const reference = inWindow.length >= 2 ? inWindow[0] : withVal[0];
+  const daysSpan = (latestTime - new Date(reference.t).getTime()) / (1000 * 60 * 60 * 24);
+  if (daysSpan <= 0) return null;
+  const gainNow = latest.positionValueUSD + latest.feesValueUSD - r.initialUSD;
+  const gainRef = reference.positionValueUSD + reference.feesValueUSD - r.initialUSD;
+  return {
+    daysSpan,
+    gainRate: (gainNow - gainRef) / daysSpan,
+    vsHoldRate: (latest.vsHoldUSD - reference.vsHoldUSD) / daysSpan
+  };
+}
+
+function buildPositionMessage(r, now, positionHistory, mc) {
   if (r.error) return `⚠️ *${r.label}*\n${now}\nError leyendo datos: ${r.error}`;
 
   const icon = r.inRange ? "🟢" : "🔴";
@@ -284,7 +424,34 @@ function buildPositionMessage(r, now) {
       const vsHoldScaled = r.vsHoldUSD * factor;
       const priceOnlyScaled = priceOnlyUSD * factor;
       msg += `\n💡 Con ${REF_AMOUNT}€ en vez de $${r.initialUSD.toFixed(2)}: ganancia aprox. ${fmt(gainScaled)} (${fmt(vsHoldScaled)} LP · ${fmt(priceOnlyScaled)} precio). Estimación lineal simple — el gas pesa menos proporcionalmente con más capital, así que lo real tendería a ser algo mejor que esto.`;
+
+      // Proyección adicional: mismo ritmo diario, extrapolado a 30 días, con el mismo capital de referencia.
+      const PROJECTION_DAYS = 30;
+      if (daysTracked !== null && daysTracked > 0) {
+        const gain30 = (gainUSD / daysTracked) * PROJECTION_DAYS * factor;
+        const vsHold30 = (r.vsHoldUSD / daysTracked) * PROJECTION_DAYS * factor;
+        const priceOnly30 = (priceOnlyUSD / daysTracked) * PROJECTION_DAYS * factor;
+        msg += `\n📅 Si este ritmo diario (media de TODO el historial) se mantuviera ${PROJECTION_DAYS} días (con ${REF_AMOUNT}€): ${fmt(gain30)} (${fmt(vsHold30)} LP · ${fmt(priceOnly30)} precio). Extrapolación ingenua, no una predicción — la parte de fees (LP) es algo más estable en el tiempo, pero la parte de movimiento de precio es esencialmente aleatoria y podría revertirse por completo.`;
+
+        // Contraste con el ritmo REAL de los últimos días (no solo la media de todo el periodo),
+        // para ver si la tendencia se acelera, frena, o es coherente — usando el historial guardado.
+        const recent = computeRecentDailyRates(positionHistory || [], r);
+        if (recent && recent.daysSpan >= 1) {
+          const gain30Recent = recent.gainRate * PROJECTION_DAYS * factor;
+          const vsHold30Recent = recent.vsHoldRate * PROJECTION_DAYS * factor;
+          const diffPct = gain30 !== 0 ? ((gain30Recent - gain30) / Math.abs(gain30)) * 100 : null;
+          const trendWord = diffPct === null ? "" : diffPct > 15 ? " (acelerándose 📈)" : diffPct < -15 ? " (frenándose 📉)" : " (similar a la media)";
+          msg += `\n🔍 Con el ritmo real de los últimos ${recent.daysSpan.toFixed(1)} días en vez de la media de todo el historial${trendWord}: ${fmt(gain30Recent)} (${fmt(vsHold30Recent)} LP). Esta cifra pesa más lecturas recientes reales (hay ${(positionHistory || []).length} guardadas) y por eso suele estar más "acorde a la realidad vivida" que la media de todo el periodo — pero sigue sin ser una predicción.`;
+        }
+      }
     }
+  }
+
+  if (mc) {
+    const fmtPct = (v) => (v >= 0 ? "+" : "") + v.toFixed(1) + "%";
+    msg += `\n\n🎲 *Simulación (${mc.diasHistorico} días de histórico real, ${MC_DAYS} días vista):*`;
+    msg += `\nEscenario neutro (sin asumir ninguna dirección): tocar máx ${(mc.neutro.pTocaArriba * 100).toFixed(1)}% · tocar mín ${(mc.neutro.pTocaAbajo * 100).toFixed(1)}% · rango esperado ${fmtPct(mc.neutro.p10)} a ${fmtPct(mc.neutro.p90)} (mediana ${fmtPct(mc.neutro.p50)}).`;
+    msg += `\nSi la tendencia reciente continuara (apuesta direccional, no neutral): tocar máx ${(mc.tendencia.pTocaArriba * 100).toFixed(1)}% · tocar mín ${(mc.tendencia.pTocaAbajo * 100).toFixed(1)}% · rango ${fmtPct(mc.tendencia.p10)} a ${fmtPct(mc.tendencia.p90)} (mediana ${fmtPct(mc.tendencia.p50)}).`;
   }
 
   msg += `\n👉 ${r.suggestion.text}`;
@@ -365,8 +532,16 @@ async function main() {
   results.forEach(r => console.log(r));
 
   const now = new Date().toLocaleString("es-ES", { timeZone: "Europe/Madrid" });
+  const cfgByTokenId = {};
+  POSITIONS.forEach(cfg => { cfgByTokenId[String(cfg.tokenId)] = cfg; });
+
   for (const r of results) {
-    await sendTelegram(buildPositionMessage(r, now));
+    let mc = null;
+    if (!r.error) {
+      const cfg = cfgByTokenId[r.tokenId];
+      if (cfg) mc = await computeMonteCarloScenarios(cfg, r.priceNow, r.priceMin, r.priceMax);
+    }
+    await sendTelegram(buildPositionMessage(r, now, history.positions[r.tokenId] || [], mc));
     await new Promise(resolve => setTimeout(resolve, 500)); // pequeña pausa entre mensajes
   }
 }
