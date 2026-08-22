@@ -155,8 +155,26 @@ function pickWeightedBlockStart(nReturns, blockSize, halflifeDays) {
   return lo;
 }
 
+// Traduce un precio simulado a valor estimado de la posición y rendimiento — reutiliza
+// la MISMA fórmula de impermanent loss que ya usa el resto del script para el vsHold real
+// (aproximación de rango completo; en el borde del rango real se desvía un poco, como ya
+// pasa con el vsHold calculado sobre datos reales).
+function estimatePositionValue(simPrice, entryApprox, initialUSD, feesPerDay, days) {
+  const ratio = simPrice / entryApprox;
+  const ilPct = (2 * Math.sqrt(ratio) / (1 + ratio) - 1) * 100;
+  const holdValueUSD = initialUSD * (0.5 + 0.5 * ratio);
+  const positionValueEstimate = holdValueUSD * (1 + ilPct / 100);
+  const feesEstimate = feesPerDay * days;
+  const totalValueEstimate = positionValueEstimate + feesEstimate;
+  return {
+    valueUSD: totalValueEstimate,
+    returnPct: ((totalValueEstimate - initialUSD) / initialUSD) * 100,
+    gainUSD: totalValueEstimate - initialUSD
+  };
+}
+
 function bootstrapMontecarlo(returns, dias, nSims, priceStart, rangeMin, rangeMax, blockSize, halflifeDays) {
-  const finales = [];
+  const resultados = [];
   let tocaArriba = 0, tocaAbajo = 0;
   for (let sim = 0; sim < nSims; sim++) {
     let precio = priceStart, arriba = false, abajo = false, diasSimulados = 0;
@@ -168,33 +186,48 @@ function bootstrapMontecarlo(returns, dias, nSims, priceStart, rangeMin, rangeMa
         if (precio <= rangeMin) abajo = true;
       }
     }
-    finales.push((precio - priceStart) / priceStart * 100);
+    resultados.push({ pct: (precio - priceStart) / priceStart * 100, precioFinal: precio });
     if (arriba) tocaArriba++;
     if (abajo) tocaAbajo++;
   }
-  finales.sort((a, b) => a - b);
-  const percentil = (p) => finales[Math.min(finales.length - 1, Math.floor(finales.length * p))];
+  resultados.sort((a, b) => a.pct - b.pct);
+  const percentil = (p) => resultados[Math.min(resultados.length - 1, Math.floor(resultados.length * p))];
+  const p10 = percentil(0.10), p50 = percentil(0.50), p90 = percentil(0.90);
   return {
     pTocaArriba: tocaArriba / nSims,
     pTocaAbajo: tocaAbajo / nSims,
-    p10: percentil(0.10), p50: percentil(0.50), p90: percentil(0.90)
+    p10: p10.pct, p50: p50.pct, p90: p90.pct,
+    precioP10: p10.precioFinal, precioP50: p50.precioFinal, precioP90: p90.precioFinal
   };
 }
 
 // Calcula ambos escenarios (neutro por defecto + tendencia observada como añadido opcional)
 // para una posición, usando histórico real de Binance. Si algo falla (símbolo no
 // reconocido, error de red), devuelve null y el mensaje simplemente omite este bloque.
-async function computeMonteCarloScenarios(cfg, priceNow, rangeMin, rangeMax) {
+async function computeMonteCarloScenarios(cfg, r) {
   try {
     const closes = await fetchRatioHistory(cfg);
     if (!closes || closes.length < MC_BLOCK_SIZE * 4) return null; // muy poco histórico para que tenga sentido
     const returns = dailyReturnsFromCloses(closes);
     const media = returns.reduce((a, b) => a + b, 0) / returns.length;
-    const returnsNeutros = returns.map(r => r - media); // fuerza dirección neutra, conserva la forma/volatilidad real
+    const returnsNeutros = returns.map(x => x - media); // fuerza dirección neutra, conserva la forma/volatilidad real
 
-    const neutro = bootstrapMontecarlo(returnsNeutros, MC_DAYS, MC_SIMULATIONS, priceNow, rangeMin, rangeMax, MC_BLOCK_SIZE, MC_EWMA_HALFLIFE_DAYS);
-    const tendencia = bootstrapMontecarlo(returns, MC_DAYS, MC_SIMULATIONS, priceNow, rangeMin, rangeMax, MC_BLOCK_SIZE, MC_EWMA_HALFLIFE_DAYS);
-    return { neutro, tendencia, diasHistorico: returns.length };
+    const neutro = bootstrapMontecarlo(returnsNeutros, MC_DAYS, MC_SIMULATIONS, r.priceNow, r.priceMin, r.priceMax, MC_BLOCK_SIZE, MC_EWMA_HALFLIFE_DAYS);
+    const tendencia = bootstrapMontecarlo(returns, MC_DAYS, MC_SIMULATIONS, r.priceNow, r.priceMin, r.priceMax, MC_BLOCK_SIZE, MC_EWMA_HALFLIFE_DAYS);
+
+    // Traducir cada percentil de precio a valor estimado en $ y rendimiento %, con las
+    // mismas fórmulas que ya usa el resto del script (no una cifra nueva sin relación).
+    const entryApprox = r.entryPrice || Math.sqrt(r.priceMin * r.priceMax);
+    const daysTracked = r.openedAt ? (Date.now() - new Date(r.openedAt).getTime()) / (1000 * 60 * 60 * 24) : null;
+    const feesPerDay = (daysTracked && daysTracked > 0) ? r.feesValueUSD / daysTracked : 0;
+    const traducir = (mc) => ({
+      ...mc,
+      valorP10: estimatePositionValue(mc.precioP10, entryApprox, r.initialUSD, feesPerDay, MC_DAYS),
+      valorP50: estimatePositionValue(mc.precioP50, entryApprox, r.initialUSD, feesPerDay, MC_DAYS),
+      valorP90: estimatePositionValue(mc.precioP90, entryApprox, r.initialUSD, feesPerDay, MC_DAYS)
+    });
+
+    return { neutro: traducir(neutro), tendencia: traducir(tendencia), diasHistorico: returns.length, feesPerDay };
   } catch (e) {
     console.error(`Montecarlo omitido (${cfg.label}): ${e.message}`);
     return null;
@@ -439,9 +472,13 @@ function buildPositionMessage(r, now, positionHistory, mc) {
 
   if (mc) {
     const fmtPct = (v) => (v >= 0 ? "+" : "") + v.toFixed(1) + "%";
+    const fmtVal = (v) => (v.returnPct >= 0 ? "+" : "") + "$" + v.valueUSD.toFixed(2) + ` (${v.returnPct >= 0 ? "+" : ""}${v.returnPct.toFixed(1)}%)`;
     msg += `\n\n🎲 *Simulación (${mc.diasHistorico} días de histórico real, ${MC_DAYS} días vista):*`;
-    msg += `\nEscenario neutro (sin asumir ninguna dirección): tocar máx ${(mc.neutro.pTocaArriba * 100).toFixed(1)}% · tocar mín ${(mc.neutro.pTocaAbajo * 100).toFixed(1)}% · rango esperado ${fmtPct(mc.neutro.p10)} a ${fmtPct(mc.neutro.p90)} (mediana ${fmtPct(mc.neutro.p50)}).`;
-    msg += `\nSi la tendencia reciente continuara (apuesta direccional, no neutral): tocar máx ${(mc.tendencia.pTocaArriba * 100).toFixed(1)}% · tocar mín ${(mc.tendencia.pTocaAbajo * 100).toFixed(1)}% · rango ${fmtPct(mc.tendencia.p10)} a ${fmtPct(mc.tendencia.p90)} (mediana ${fmtPct(mc.tendencia.p50)}).`;
+    msg += `\nEscenario neutro (sin asumir ninguna dirección): tocar máx ${(mc.neutro.pTocaArriba * 100).toFixed(1)}% · tocar mín ${(mc.neutro.pTocaAbajo * 100).toFixed(1)}%`;
+    msg += `\n  Valor estimado a ${MC_DAYS} días — pesimista ${fmtVal(mc.neutro.valorP10)} · mediana ${fmtVal(mc.neutro.valorP50)} · optimista ${fmtVal(mc.neutro.valorP90)}`;
+    msg += `\nSi la tendencia reciente continuara (apuesta direccional, no neutral): tocar máx ${(mc.tendencia.pTocaArriba * 100).toFixed(1)}% · tocar mín ${(mc.tendencia.pTocaAbajo * 100).toFixed(1)}%`;
+    msg += `\n  Valor estimado a ${MC_DAYS} días — pesimista ${fmtVal(mc.tendencia.valorP10)} · mediana ${fmtVal(mc.tendencia.valorP50)} · optimista ${fmtVal(mc.tendencia.valorP90)}`;
+    msg += `\n_(Valor = tu depósito de $${r.initialUSD.toFixed(2)} corregido por el movimiento de precio simulado y el impermanent loss, más las fees estimadas a tu ritmo actual de $${mc.feesPerDay.toFixed(5)}/día. Es una traducción de la simulación de precio a dinero real, no una garantía.)_`;
   }
 
   msg += `\n👉 ${r.suggestion.text}`;
@@ -529,7 +566,7 @@ async function main() {
     let mc = null;
     if (!r.error) {
       const cfg = cfgByTokenId[r.tokenId];
-      if (cfg) mc = await computeMonteCarloScenarios(cfg, r.priceNow, r.priceMin, r.priceMax);
+      if (cfg) mc = await computeMonteCarloScenarios(cfg, r);
     }
     await sendTelegram(buildPositionMessage(r, now, history.positions[r.tokenId] || [], mc));
     await new Promise(resolve => setTimeout(resolve, 500)); // pequeña pausa entre mensajes
