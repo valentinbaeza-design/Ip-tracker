@@ -453,7 +453,7 @@ function buildPositionMessage(r, now, positionHistory, mc) {
     const pctStr = (p) => p !== null ? ` (${p >= 0 ? "+" : ""}${p.toFixed(1)}%)` : "";
 
     msg += `\n\nvs Hold: ${fmt(r.vsHoldUSD)}${pctStr(vsHoldPct)}`;
-    msg += `\n📊 *Desglose*${daysTracked !== null ? ` (${daysTracked.toFixed(1)} días)` : ""}: de ${fmt(gainUSD)} totales (Valor actual $${r.positionValueUSD.toFixed(2)} + Fees $${r.feesValueUSD.toFixed(2)} − Depósito $${r.initialUSD.toFixed(2)}) → ${fmt(r.vsHoldUSD)}${pctStr(vsHoldPct)} por ser LP (fees − IL) · ${fmt(priceOnlyUSD)}${pctStr(priceOnlyPct)} solo por movimiento de precio.`;
+    msg += `\n📊 *Desglose*${daysTracked !== null ? ` (${daysTracked.toFixed(1)} días)` : ""} _(esto ya ha pasado de verdad, no es una estimación)_: de ${fmt(gainUSD)} totales (Valor actual $${r.positionValueUSD.toFixed(2)} + Fees $${r.feesValueUSD.toFixed(2)} − Depósito $${r.initialUSD.toFixed(2)}) → ${fmt(r.vsHoldUSD)}${pctStr(vsHoldPct)} por ser LP (fees − IL) · ${fmt(priceOnlyUSD)}${pctStr(priceOnlyPct)} solo por movimiento de precio.`;
 
     // Proyección a un importe de referencia (1.000€), escalando linealmente el mismo desglose
     // YA OBSERVADO (mismo periodo real, sin extrapolar en el tiempo — por eso es fiable).
@@ -471,14 +471,19 @@ function buildPositionMessage(r, now, positionHistory, mc) {
   }
 
   if (mc) {
-    const fmtPct = (v) => (v >= 0 ? "+" : "") + v.toFixed(1) + "%";
-    const fmtVal = (v) => (v.returnPct >= 0 ? "+" : "") + "$" + v.valueUSD.toFixed(2) + ` (${v.returnPct >= 0 ? "+" : ""}${v.returnPct.toFixed(1)}%)`;
-    msg += `\n\n🎲 *Simulación (${mc.diasHistorico} días de histórico real, ${MC_DAYS} días vista):*`;
+    const REF_AMOUNT = 1000;
+    const factor = REF_AMOUNT / r.initialUSD;
+    const fmtValScaled = (v) => {
+      const gainScaled = v.gainUSD * factor;
+      const valueScaled = REF_AMOUNT + gainScaled;
+      return (v.returnPct >= 0 ? "+" : "") + "$" + valueScaled.toFixed(2) + ` (${v.returnPct >= 0 ? "+" : ""}${v.returnPct.toFixed(1)}%)`;
+    };
+    msg += `\n\n🎲 *Simulación (${mc.diasHistorico} días de histórico real, ${MC_DAYS} días vista)* _(esto es una estimación con base estadística real, no una predicción — por eso van dos escenarios y tres cifras, para no fingir una certeza que no existe)_:`;
     msg += `\nEscenario neutro (sin asumir ninguna dirección): tocar máx ${(mc.neutro.pTocaArriba * 100).toFixed(1)}% · tocar mín ${(mc.neutro.pTocaAbajo * 100).toFixed(1)}%`;
-    msg += `\n  Valor estimado a ${MC_DAYS} días — pesimista ${fmtVal(mc.neutro.valorP10)} · mediana ${fmtVal(mc.neutro.valorP50)} · optimista ${fmtVal(mc.neutro.valorP90)}`;
+    msg += `\n  Con ${REF_AMOUNT}€ en vez de $${r.initialUSD.toFixed(2)} — pesimista ${fmtValScaled(mc.neutro.valorP10)} · mediana ${fmtValScaled(mc.neutro.valorP50)} · optimista ${fmtValScaled(mc.neutro.valorP90)}`;
     msg += `\nSi la tendencia reciente continuara (apuesta direccional, no neutral): tocar máx ${(mc.tendencia.pTocaArriba * 100).toFixed(1)}% · tocar mín ${(mc.tendencia.pTocaAbajo * 100).toFixed(1)}%`;
-    msg += `\n  Valor estimado a ${MC_DAYS} días — pesimista ${fmtVal(mc.tendencia.valorP10)} · mediana ${fmtVal(mc.tendencia.valorP50)} · optimista ${fmtVal(mc.tendencia.valorP90)}`;
-    msg += `\n_(Valor = tu depósito de $${r.initialUSD.toFixed(2)} corregido por el movimiento de precio simulado y el impermanent loss, más las fees estimadas a tu ritmo actual de $${mc.feesPerDay.toFixed(5)}/día. Es una traducción de la simulación de precio a dinero real, no una garantía.)_`;
+    msg += `\n  Con ${REF_AMOUNT}€ en vez de $${r.initialUSD.toFixed(2)} — pesimista ${fmtValScaled(mc.tendencia.valorP10)} · mediana ${fmtValScaled(mc.tendencia.valorP50)} · optimista ${fmtValScaled(mc.tendencia.valorP90)}`;
+    msg += `\n_(El % es el mismo con $${r.initialUSD.toFixed(2)} o con ${REF_AMOUNT}€ — solo cambia la cifra en dinero. Calculado con el movimiento de precio simulado + impermanent loss + fees a tu ritmo actual de $${mc.feesPerDay.toFixed(5)}/día. No es una garantía.)_`;
   }
 
   msg += `\n👉 ${r.suggestion.text}`;
