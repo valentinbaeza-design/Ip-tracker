@@ -21,6 +21,13 @@
         "content": "- [28 Feb 2026] EE.UU. e Israel atacan Irán → Irán cierra Estrecho de Hormuz, interrupción del 20% del LNG mundial\n- [Mar 2026] QatarEnergy declara fuerza mayor en exportaciones LNG tras ataques a Ras Laffan\n- [7 Jul 2026] Reanudación de ataques a buques en Hormuz → precios LNG internacionales suben a máximos de abril\n- [13 Abr 2026] EE.UU. impone bloqueo naval a Irán tras fracaso de negociaciones en Islamabad\n- [17 Jun 2026] MOU EE.UU.-Irán: paso seguro de buques por 60 días; bloqueo naval levantado temporalmente\n- [Ago 2026] Producción gas Lower 48 EE.UU.: 111,6 bcfd, récord histórico mensual\n- [13 Ago 2026] EIA storage: 3.153 Bcf, +6,7% sobre media 5 años → presión bajista HH\n- [20 Ago 2026] EIA storage: 3.169 Bcf, +16 Bcf (por debajo de lo esperado), 185 Bcf sobre media 5 años\n- [20 Ago 2026] TTF (gas europeo): 65,33 EUR/MWh, +97% interanual\n- [Nov 2027] Límite legal para el phaseout del gas ruso en la UE (decisión ya tomada)",
         "auto": true,
         "source": "github-actions"
+      },
+      {
+        "id": "1787475798631-geo",
+        "savedAt": "2026-08-23T09:03:18.631Z",
+        "content": "- [28 feb 2026] EEUU e Israel atacan Irán; Irán cierra el Estrecho de Ormuz; inicio crisis global de LNG\n- [Mar 2026] QatarEnergy declara fuerza mayor en LNG tras ataques a Ras Laffan; -99% tráfico LNG por Hormuz hasta jun\n- [13 abr 2026] EEUU impone bloqueo naval a Irán tras fracaso de negociaciones en Islamabad\n- [17 jun 2026] Trump y Pezeshkian firman MOU: fin del bloqueo naval + paso comercial libre por 60 días\n- [7 jul 2026] Reanudación de ataques a buques en Hormuz; EEUU reimplanta bloqueo naval a principios de agosto 2026\n- [Ago 2026] Precios LNG europeos y asiáticos en máximos desde ene 2023; almacenamiento UE al 62%, mínimo histórico estacional desde 2009\n- [Ago 2026] Henry Hub ~$2.77/MMBtu; producción EE.UU. récord ~111.5 Bcf/d; mercado doméstico relativamente aislado del shock global\n- [2025 full year] Inversión en LNG superó 90 bcm de capacidad en FID, segundo año récord histórico tras 2019; EEUU lidera con >80 bcm aprobados\n- [Nov 2027] Fecha límite fijada por la UE para eliminar totalmente importaciones de gas ruso",
+        "auto": true,
+        "source": "github-actions"
       }
     ]
   }
