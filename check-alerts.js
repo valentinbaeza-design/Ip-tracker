@@ -144,6 +144,31 @@ async function checkCalibrations() {
 // ---------- Evaluación de tendencia cuando la alerta NO se cumple todavía ----------
 // En vez de quedarse en silencio, valora si el movimiento reciente favorece o dificulta
 // que se llegue al disparador, y si conviene mantenerlo, acercarlo o dejarlo tal cual.
+// Precio de disparador alternativo, más cercano al actual, cuando la tendencia va en
+// contra de la alerta. SIEMPRE el punto medio entre el precio actual y el disparador
+// original — funciona igual para COMPRAR y para CORTO, porque el punto medio de dos
+// números no depende de en qué dirección se está esperando el movimiento.
+//
+// CORRECCIÓN: la versión anterior usaba "currentPrice - distance * 0.5", donde
+// "distance" ya llevaba un signo distinto según la dirección (currentPrice-triggerPrice
+// para COMPRAR, triggerPrice-currentPrice para CORTO) — aplicar la misma resta a ambos
+// casos solo daba el punto medio correcto para COMPRAR. Para CORTO, el resultado caía
+// por debajo del precio actual (sin sentido: una alerta CORTO espera que el precio SUBA,
+// un disparador alternativo "más cercano" nunca debería quedar por debajo de donde ya
+// está el precio). Ej.: CORTO esperando subida de 100 a 120 → antes sugería 90 (mal,
+// por debajo del precio actual), ahora sugiere 110 (punto medio real entre 100 y 120).
+export function computeAltTrigger(currentPrice, triggerPrice) {
+  return (currentPrice + triggerPrice) / 2;
+}
+
+// Determina si el movimiento reciente del precio (trendPct) favorece o va en contra de
+// una alerta, según su dirección. Extraído como función pura para poder testearlo aparte.
+export function evaluateTrendDirection(direction, trendPct, expectedNoiseBand) {
+  const favorable = direction === "COMPRAR" ? trendPct < -expectedNoiseBand : trendPct > expectedNoiseBand;
+  const contrary = direction === "COMPRAR" ? trendPct > expectedNoiseBand : trendPct < -expectedNoiseBand;
+  return { favorable, contrary };
+}
+
 async function buildTrendEvaluationMessage(alert, currentPrice) {
   const distance = alert.direction === "COMPRAR" ? currentPrice - alert.triggerPrice : alert.triggerPrice - currentPrice;
   const distancePct = (Math.abs(distance) / currentPrice) * 100;
@@ -174,13 +199,12 @@ async function buildTrendEvaluationMessage(alert, currentPrice) {
 
         trendLine = `Tendencia reciente (${alert.proxySymbol}, ~5 sesiones): ${trendPct >= 0 ? "+" : ""}${trendPct.toFixed(1)}% (ruido normal esperado: ±${expectedNoiseBand.toFixed(1)}%).`;
 
-        const favorable = alert.direction === "COMPRAR" ? trendPct < -expectedNoiseBand : trendPct > expectedNoiseBand;
-        const contrary = alert.direction === "COMPRAR" ? trendPct > expectedNoiseBand : trendPct < -expectedNoiseBand;
+        const { favorable, contrary } = evaluateTrendDirection(alert.direction, trendPct, expectedNoiseBand);
 
         if (favorable) {
           adviceLine = "El movimiento reciente va en la dirección que tu alerta necesita, y supera el ruido habitual del activo — parece razonable mantenerla tal cual.";
         } else if (contrary) {
-          const altTrigger = currentPrice - distance * 0.5;
+          const altTrigger = computeAltTrigger(currentPrice, alert.triggerPrice);
           adviceLine =
             `El movimiento reciente va en dirección contraria a tu alerta, y por encima de lo que sería ruido normal — puede tardar más de lo esperado o no cumplirse pronto. ` +
             `Si prefieres no esperar tanto, podrías considerar un disparador más cercano, aprox. ${altTrigger.toFixed(3)} en lugar del actual (${alert.triggerPrice}). ` +
@@ -245,7 +269,9 @@ async function main() {
   }
 }
 
-main().catch(e => {
-  console.error("Error general:", e);
-  process.exit(1);
-});
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().catch(e => {
+    console.error("Error general:", e);
+    process.exit(1);
+  });
+}
