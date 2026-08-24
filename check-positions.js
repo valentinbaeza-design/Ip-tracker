@@ -412,7 +412,7 @@ async function checkPosition(cfg) {
 }
 
 // ---------- Rango sugerido a partir del movimiento real de precio observado ----------
-function computeSuggestedRange(positionHistory, bufferPct = 10) {
+export function computeSuggestedRange(positionHistory, bufferPct = 10) {
   const withPrice = positionHistory.filter(h => typeof h.priceNow === "number");
   if (withPrice.length < 15) return null; // poco histórico todavía, no proponer nada
   const prices = withPrice.map(h => h.priceNow);
@@ -427,7 +427,7 @@ function computeSuggestedRange(positionHistory, bufferPct = 10) {
 }
 
 // ---------- Pasos concretos de reequilibrio (enlaces + instrucciones) ----------
-function buildActionSteps(r, targetMin, targetMax) {
+export function buildActionSteps(r, targetMin, targetMax) {
   const openUrl = r.chainSlug
     ? `https://app.uniswap.org/positions/create/v3?currencyA=NATIVE&currencyB=${r.otherTokenAddress}&chain=${r.chainSlug}&fee=${r.feeTierBps}`
     : null;
@@ -444,7 +444,7 @@ const MIN_DAYS_FOR_RANGE_SUGGESTION = 3; // mínimo técnico para poder calcular
 const RECOMMENDED_DAYS_BEFORE_ACTING = 21; // con menos, la propuesta es orientativa, no una recomendación firme
 const MIN_USD_TO_JUSTIFY_GAS = 15; // por debajo de esto, el gas de retirar+abrir probablemente se come la mejora
 
-function buildSuggestion(r, positionHistory) {
+export function buildSuggestion(r, positionHistory) {
   const msgs = [];
   let action = null;
 
