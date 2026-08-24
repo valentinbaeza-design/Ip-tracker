@@ -19,14 +19,30 @@ const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 const APININJAS_KEY = process.env.APININJAS_KEY;
 
+// Fase 3: un fallo de Telegram ya no pasa desapercibido — especialmente crítico aquí,
+// porque este es el script que avisa de disparos reales de órdenes (con la obligación
+// de cancelar la contraria a mano). sendTelegram devuelve true/false y main() marca
+// el proceso como fallido si algún aviso no llegó.
+let anyTelegramFailed = false;
 async function sendTelegram(text) {
-  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text, parse_mode: "HTML" })
-  });
-  if (!res.ok) console.error("Error enviando a Telegram:", await res.text());
+  try {
+    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text, parse_mode: "HTML" })
+    });
+    if (!res.ok) {
+      console.error("Error enviando a Telegram:", await res.text());
+      anyTelegramFailed = true;
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error("Error de red enviando a Telegram:", e.message);
+    anyTelegramFailed = true;
+    return false;
+  }
 }
 
 // Traduce nuestros códigos tipo "NATURAL_GAS_USD" al nombre que espera API Ninjas
@@ -140,11 +156,15 @@ async function main() {
       console.log("Alerta enviada a Telegram.");
     }
   }
+
+  if (anyTelegramFailed) {
+    console.error("Al menos un aviso de disparo no se pudo enviar a Telegram. Marcando la ejecución como fallida.");
+    process.exitCode = 1;
+  }
 }
 
 main().catch(e => {
   console.error("Error general:", e);
   process.exit(1);
 });
-
 
