@@ -21,13 +21,13 @@ const ERC20_ABI = ["function symbol() view returns (string)", "function decimals
 
 const MAX_UINT128 = (2n ** 128n) - 1n;
 
-function tickToPrice(tick, dec0, dec1) {
+export function tickToPrice(tick, dec0, dec1) {
   return Math.pow(1.0001, tick) * Math.pow(10, dec0 - dec1);
 }
-function tickToSqrtPrice(tick) {
+export function tickToSqrtPrice(tick) {
   return Math.sqrt(Math.pow(1.0001, tick));
 }
-function getAmountsForLiquidity(liquidity, sqrtP, sqrtA, sqrtB) {
+export function getAmountsForLiquidity(liquidity, sqrtP, sqrtA, sqrtB) {
   let amount0 = 0, amount1 = 0;
   if (sqrtP <= sqrtA) {
     amount0 = liquidity * (1 / sqrtA - 1 / sqrtB);
@@ -38,6 +38,78 @@ function getAmountsForLiquidity(liquidity, sqrtP, sqrtA, sqrtB) {
     amount1 = liquidity * (sqrtP - sqrtA);
   }
   return { amount0, amount1 };
+}
+
+// ---------- Fase 2: vs Hold / IL real (no aproximación 50/50) ----------
+// Reconstruye cuántos tokens de cada uno se depositaron REALMENTE al abrir la posición,
+// usando la misma matemática de liquidez concentrada que ya se usa para el valor actual
+// (getAmountsForLiquidity), evaluada en el precio de ENTRADA en vez del precio de ahora.
+// Antes, el código asumía 50/50 en valor al entrar — casi nunca es cierto en V3: la
+// proporción real depende de dónde caía el precio de entrada dentro del rango.
+//
+// Requiere price0EntryUsd (precio absoluto en USD de token0 el día de apertura) como ancla;
+// price1EntryUsd se deriva de ahí y de entryPrice (no hace falta pedirlo aparte).
+// Devuelve null si los datos de entrada no son válidos (rango cero, precio <= 0, etc.).
+export function reconstructEntryAmounts(entryPrice, rangeMin, rangeMax, initialUSD, price0EntryUsd) {
+  if (!(entryPrice > 0) || !(rangeMin > 0) || !(rangeMax > rangeMin) || !(initialUSD > 0) || !(price0EntryUsd > 0)) {
+    return null;
+  }
+  const price1EntryUsd = price0EntryUsd / entryPrice;
+  const sqrtP0 = Math.sqrt(entryPrice);
+  const sqrtA = Math.sqrt(rangeMin);
+  const sqrtB = Math.sqrt(rangeMax);
+  // L=1 para obtener solo la PROPORCIÓN entre token0/token1 a ese precio; se escala después.
+  const { amount0: u0, amount1: u1 } = getAmountsForLiquidity(1, sqrtP0, sqrtA, sqrtB);
+  const unscaledValueUsd = u0 * price0EntryUsd + u1 * price1EntryUsd;
+  if (!(unscaledValueUsd > 0)) return null;
+  const scale = initialUSD / unscaledValueUsd;
+  return { amount0Entry: u0 * scale, amount1Entry: u1 * scale, price1EntryUsd };
+}
+
+// Valor en USD de "haber holdeado" los tokens depositados en vez de aportarlos como liquidez,
+// valorados a precios ACTUALES (ya se tienen de getUsdPrices, no hace falta precio histórico aquí).
+export function computeRealHoldValueUsd(amount0Entry, amount1Entry, price0NowUsd, price1NowUsd) {
+  return amount0Entry * price0NowUsd + amount1Entry * price1NowUsd;
+}
+
+// Fallback explícito (misma fórmula que existía antes de Fase 2): asume 50/50 en valor al
+// entrar. Se usa SOLO cuando no se pudo reconstruir el reparto real (p.ej. sin precio
+// histórico disponible), y el resultado se marca como aproximado en vez de mostrarse como
+// si fuera un dato cierto — mismo principio que el modelo de estado de Fase 1.
+export function approxHoldValueUsd50_50(priceNow, entryApprox, initialUSD) {
+  const ratio = priceNow / entryApprox;
+  return initialUSD * (0.5 + 0.5 * ratio);
+}
+// ---------- Fin Fase 2 ----------
+
+// Mapa símbolo -> id de CoinGecko, compartido con getUsdPrices (mismo criterio, una sola fuente).
+const CG_ID_BY_SYMBOL = { WETH: "ethereum", ETH: "ethereum", USDC: "usd-coin", ARB: "arbitrum" };
+const STABLECOIN_SYMBOLS = new Set(["USDC", "USDT", "DAI", "USD₮0"]); // precio ~1 USD, no hace falta histórico
+
+// Precio absoluto en USD de un símbolo en una fecha concreta, vía el endpoint /history de
+// CoinGecko (formato de fecha requerido: dd-mm-yyyy). Si el símbolo es una stablecoin
+// conocida, devuelve 1 directamente sin llamar a la red. Devuelve null si no se puede
+// obtener (símbolo no mapeado, fecha sin datos, fallo de red) — el llamador debe tratar
+// null como "no disponible", nunca inventar un valor.
+export async function fetchHistoricalUsdPrice(symbol, dateIso) {
+  if (STABLECOIN_SYMBOLS.has(symbol)) return 1;
+  const id = CG_ID_BY_SYMBOL[symbol];
+  if (!id) return null;
+  const d = new Date(dateIso);
+  if (isNaN(d.getTime())) return null;
+  const dd = String(d.getUTCDate()).padStart(2, "0");
+  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const yyyy = d.getUTCFullYear();
+  try {
+    const res = await fetch(`https://api.coingecko.com/api/v3/coins/${id}/history?date=${dd}-${mm}-${yyyy}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const usd = data?.market_data?.current_price?.usd;
+    return typeof usd === "number" ? usd : null;
+  } catch (e) {
+    console.error(`fetchHistoricalUsdPrice falló para ${symbol} (${dateIso}):`, e.message);
+    return null;
+  }
 }
 
 async function getUsdPrices(symbols) {
@@ -155,15 +227,28 @@ function pickWeightedBlockStart(nReturns, blockSize, halflifeDays) {
   return lo;
 }
 
-// Traduce un precio simulado a valor estimado de la posición y rendimiento — reutiliza
-// la MISMA fórmula de impermanent loss que ya usa el resto del script para el vsHold real
-// (aproximación de rango completo; en el borde del rango real se desvía un poco, como ya
-// pasa con el vsHold calculado sobre datos reales).
-function estimatePositionValue(simPrice, entryApprox, initialUSD, feesPerDay, days) {
-  const ratio = simPrice / entryApprox;
-  const ilPct = (2 * Math.sqrt(ratio) / (1 + ratio) - 1) * 100;
-  const holdValueUSD = initialUSD * (0.5 + 0.5 * ratio);
-  const positionValueEstimate = holdValueUSD * (1 + ilPct / 100);
+// Traduce un precio simulado a valor estimado de la posición y rendimiento, usando la
+// MISMA matemática de liquidez acotada que el resto del script (getAmountsForLiquidity),
+// en vez de la fórmula cerrada de IL de rango completo (V2/50-50) que se usaba antes.
+// Ventaja añadida sobre la fórmula anterior: si el precio simulado sale del rango
+// [rangeMin, rangeMax], el resultado refleja correctamente que la posición pasa a ser
+// 100% de un solo token (la fórmula cerrada anterior no modelaba eso, seguía aplicando
+// la misma curva más allá de los límites).
+//
+// Simplificación que SÍ se mantiene (fuera del alcance de este fix): se asume que el
+// precio absoluto en USD de token0 se mantiene constante durante la simulación, y solo
+// se mueve el RATIO simulado — porque el Montecarlo solo simula el ratio histórico, no
+// las dos trayectorias de precio absoluto por separado. Esto significa que un movimiento
+// direccional fuerte del propio ETH (independiente del ratio ARB/WETH) no se captura aquí.
+export function estimatePositionValueV2(simPrice, entryPrice, rangeMin, rangeMax, initialUSD, feesPerDay, days) {
+  const sqrtEntry = Math.sqrt(entryPrice), sqrtA = Math.sqrt(rangeMin), sqrtB = Math.sqrt(rangeMax);
+  const { amount0: u0, amount1: u1 } = getAmountsForLiquidity(1, sqrtEntry, sqrtA, sqrtB);
+  const denomEntry = u0 + u1 / entryPrice; // valor de entrada en unidades "token0-equivalente"
+  if (!(denomEntry > 0)) return null;
+  const Lusd = initialUSD / denomEntry; // liquidez escalada para que el valor de entrada cuadre con initialUSD
+  const sqrtSim = Math.sqrt(simPrice);
+  const { amount0: xSim, amount1: ySim } = getAmountsForLiquidity(Lusd, sqrtSim, sqrtA, sqrtB);
+  const positionValueEstimate = xSim + ySim / simPrice;
   const feesEstimate = feesPerDay * days;
   const totalValueEstimate = positionValueEstimate + feesEstimate;
   return {
@@ -222,9 +307,9 @@ async function computeMonteCarloScenarios(cfg, r) {
     const feesPerDay = (daysTracked && daysTracked > 0) ? r.feesValueUSD / daysTracked : 0;
     const traducir = (mc) => ({
       ...mc,
-      valorP10: estimatePositionValue(mc.precioP10, entryApprox, r.initialUSD, feesPerDay, MC_DAYS),
-      valorP50: estimatePositionValue(mc.precioP50, entryApprox, r.initialUSD, feesPerDay, MC_DAYS),
-      valorP90: estimatePositionValue(mc.precioP90, entryApprox, r.initialUSD, feesPerDay, MC_DAYS)
+      valorP10: estimatePositionValueV2(mc.precioP10, entryApprox, r.priceMin, r.priceMax, r.initialUSD, feesPerDay, MC_DAYS),
+      valorP50: estimatePositionValueV2(mc.precioP50, entryApprox, r.priceMin, r.priceMax, r.initialUSD, feesPerDay, MC_DAYS),
+      valorP90: estimatePositionValueV2(mc.precioP90, entryApprox, r.priceMin, r.priceMax, r.initialUSD, feesPerDay, MC_DAYS)
     });
 
     return { neutro: traducir(neutro), tendencia: traducir(tendencia), diasHistorico: returns.length, feesPerDay };
@@ -488,8 +573,8 @@ function buildPositionMessage(r, now, positionHistory, mc) {
 
   msg += `\n👉 ${r.suggestion.text}`;
 
-  if (r.ilPct !== null && !r.entryPrice) {
-    msg += `\n\n_vs hold es aproximado (sin precio de entrada exacto registrado)._`;
+  if (r.vsHoldApprox) {
+    msg += `\n\n_vs hold es aproximado (no se pudo reconstruir el reparto real de entrada — falta precio histórico o precio de entrada)._`;
   }
   return msg;
 }
@@ -519,26 +604,45 @@ async function main() {
   const symbols = [...new Set(raw.filter(r => !r.error).flatMap(r => [r.sym0, r.sym1]))];
   const prices = await getUsdPrices(symbols);
 
-  const results = raw.map(r => {
-    if (r.error) return r;
+  const results = [];
+  for (const r of raw) {
+    if (r.error) { results.push(r); continue; }
     const p0 = prices[r.sym0], p1 = prices[r.sym1];
-    let positionValueUSD = null, feesValueUSD = null, totalReturnPct = null, ilPct = null, vsHoldUSD = null;
+    let positionValueUSD = null, feesValueUSD = null, totalReturnPct = null, ilPct = null, vsHoldUSD = null, vsHoldApprox = false;
     if (p0 != null && p1 != null) {
       positionValueUSD = r.amount0Human * p0 + r.amount1Human * p1;
       feesValueUSD = r.fee0Human * p0 + r.fee1Human * p1;
       totalReturnPct = ((positionValueUSD + feesValueUSD - r.initialUSD) / r.initialUSD) * 100;
 
-      const entryApprox = r.entryPrice || Math.sqrt(r.priceMin * r.priceMax);
-      const ratio = r.priceNow / entryApprox;
-      ilPct = (2 * Math.sqrt(ratio) / (1 + ratio) - 1) * 100;
-      const holdValueUSD = r.initialUSD * (0.5 + 0.5 * ratio);
+      // Fase 2: vs Hold real, reconstruyendo el reparto de tokens que de verdad tenías al
+      // entrar (no un 50/50 asumido). Necesita el precio de entrada real (Fase 1) y un
+      // precio histórico absoluto para el día de apertura.
+      let holdValueUSD = null;
+      if (r.entryPrice && r.openedAt) {
+        const price0EntryUsd = await fetchHistoricalUsdPrice(r.sym0, r.openedAt);
+        if (price0EntryUsd != null) {
+          const entryAmounts = reconstructEntryAmounts(r.entryPrice, r.priceMin, r.priceMax, r.initialUSD, price0EntryUsd);
+          if (entryAmounts) {
+            holdValueUSD = computeRealHoldValueUsd(entryAmounts.amount0Entry, entryAmounts.amount1Entry, p0, p1);
+          }
+        }
+      }
+      if (holdValueUSD === null) {
+        // Fallback: sin precio de entrada real, sin fecha de apertura, o sin precio
+        // histórico disponible ese día. Se avisa explícitamente, no se presenta como cierto.
+        console.error(`vs Hold aproximado para ${r.label}: no se pudo reconstruir el reparto real de entrada (50/50 asumido).`);
+        vsHoldApprox = true;
+        const entryApprox = r.entryPrice || Math.sqrt(r.priceMin * r.priceMax);
+        holdValueUSD = approxHoldValueUsd50_50(r.priceNow, entryApprox, r.initialUSD);
+      }
+      ilPct = ((positionValueUSD - holdValueUSD) / holdValueUSD) * 100;
       vsHoldUSD = (positionValueUSD + feesValueUSD) - holdValueUSD;
     }
-    const withCalc = { ...r, positionValueUSD, feesValueUSD, totalReturnPct, ilPct, vsHoldUSD };
+    const withCalc = { ...r, positionValueUSD, feesValueUSD, totalReturnPct, ilPct, vsHoldUSD, vsHoldApprox };
     const positionHistory = history.positions[r.tokenId] || [];
     const suggestion = buildSuggestion(withCalc, positionHistory);
-    return { ...withCalc, suggestion };
-  });
+    results.push({ ...withCalc, suggestion });
+  }
 
   // Añadir la lectura de hoy al historial (antes de enviar el mensaje, para que
   // la próxima ejecución ya vea esta como "reciente")
@@ -556,7 +660,8 @@ async function main() {
       feesValueUSD: r.feesValueUSD,
       ilPct: r.ilPct,
       vsHoldUSD: r.vsHoldUSD,
-      entryPriceUsed: !!r.entryPrice
+      entryPriceUsed: !!r.entryPrice,
+      vsHoldApprox: !!r.vsHoldApprox
     });
   });
   saveHistory(history);
@@ -578,4 +683,8 @@ async function main() {
   }
 }
 
-main();
+// Solo ejecuta main() si el script se corre directamente (node check-positions.js),
+// no cuando se importa como módulo desde los tests.
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main();
+}
