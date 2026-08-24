@@ -70,7 +70,7 @@ function nowMadrid() {
   return new Date().toLocaleString("es-ES", { timeZone: "Europe/Madrid", dateStyle: "short", timeStyle: "medium" });
 }
 
-function isTriggered(alert, currentPrice) {
+export function isTriggered(alert, currentPrice) {
   if (alert.direction === "COMPRAR") return currentPrice <= alert.triggerPrice;
   if (alert.direction === "CORTO") return currentPrice >= alert.triggerPrice;
   return false;
@@ -163,8 +163,10 @@ async function main() {
   }
 }
 
-main().catch(e => {
-  console.error("Error general:", e);
-  process.exit(1);
-});
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().catch(e => {
+    console.error("Error general:", e);
+    process.exit(1);
+  });
+}
 
