@@ -7,16 +7,34 @@ on:
 permissions:
   contents: write   # necesario para que el bot pueda guardar history.json en el repo
 
+# Evita que dos ejecuciones de ESTE MISMO workflow se solapen si una tarda más de lo
+# normal (no cancela la que ya está corriendo, solo impide que arranque una segunda
+# en paralelo — la siguiente programada simplemente se salta si la anterior sigue viva).
+concurrency:
+  group: check-lp-positions
+  cancel-in-progress: false
+
 jobs:
   check:
     runs-on: ubuntu-latest
+    # Protección contra que una petición colgada bloquee las siguientes ejecuciones
+    # programadas — antes no había límite explícito (por defecto GitHub Actions permite
+    # hasta 6h por job, muchísimo más de lo que este script necesita nunca).
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
       - run: npm install
-      - run: node check-positions.js
+      - name: Run check-positions.js
+        id: run_check
+        # No detiene el job si el script termina con error (p.ej. Telegram falló) —
+        # así el siguiente paso (guardar history.json) se ejecuta igualmente. La
+        # ejecución se marca como fallida al final, en el último paso, sin perder
+        # el guardado de datos por el camino.
+        continue-on-error: true
+        run: node check-positions.js
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -26,6 +44,24 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add history.json
-          git diff --staged --quiet || git commit -m "Actualizar historial de posiciones"
-          git push
-
+          if git diff --staged --quiet; then
+            echo "Sin cambios en history.json, nada que subir."
+            exit 0
+          fi
+          git commit -m "Actualizar historial de posiciones"
+          # Reintento con pull --rebase: check.yml y check-geo.yml pueden solaparse
+          # en el mismo horario (ambos corren cada 4h) y tocan ficheros distintos, pero
+          # un "git push" puede rechazarse igualmente si el otro workflow ya empujó un
+          # commit entre medias (no es un conflicto de contenido, es que la rama avanzó).
+          n=0
+          until git push || [ $n -ge 3 ]; do
+            n=$((n+1))
+            echo "Push rechazado (intento $n/3), reintentando tras sincronizar con origin..."
+            sleep $((RANDOM % 10 + 1))   # espera aleatoria corta para no chocar dos veces seguidas
+            git pull --rebase origin main
+          done
+      - name: Marcar la ejecución como fallida si check-positions.js falló
+        if: steps.run_check.outcome == 'failure'
+        run: |
+          echo "check-positions.js terminó con error (ver log del paso anterior) — history.json ya se guardó, pero esta ejecución se marca como fallida para que se note."
+          exit 1
