@@ -235,20 +235,31 @@ function pickWeightedBlockStart(nReturns, blockSize, halflifeDays) {
 // 100% de un solo token (la fórmula cerrada anterior no modelaba eso, seguía aplicando
 // la misma curva más allá de los límites).
 //
+// CORRECCIÓN (detectada por Valen el 24/8: "por qué el pesimista sale mejor que el
+// optimista"): el valor se calcula en términos de TOKEN1 (multiplicando el token0 por
+// el precio), no de token0 (dividiendo el token1 entre el precio) como en el primer
+// intento. price = cantidad de token1 por token0 (ej. USDC por WETH), así que 1 unidad
+// de token0 vale exactamente "price" unidades de token1 — para pasar todo a la misma
+// unidad hay que multiplicar el lado de token0 por el precio, no dividir el lado de
+// token1. La primera versión lo hacía al revés, lo cual equivalía silenciosamente a
+// asumir que el precio absoluto del token1 (no del token0) es el que sube al mover el
+// ratio — backwards para un par como WETH/USDC, donde es evidente que el que se mueve
+// es el ETH, no el USDC.
+//
 // Simplificación que SÍ se mantiene (fuera del alcance de este fix): se asume que el
-// precio absoluto en USD de token0 se mantiene constante durante la simulación, y solo
-// se mueve el RATIO simulado — porque el Montecarlo solo simula el ratio histórico, no
-// las dos trayectorias de precio absoluto por separado. Esto significa que un movimiento
-// direccional fuerte del propio ETH (independiente del ratio ARB/WETH) no se captura aquí.
+// precio absoluto en USD de token1 se mantiene constante durante la simulación, y solo
+// se mueve el RATIO simulado (equivalente a asumir que solo se mueve el token0, que es
+// lo económicamente razonable cuando token1 es una stablecoin — para pares sin
+// stablecoin, como WETH/ARB, es una simplificación más discutible, documentada aquí).
 export function estimatePositionValueV2(simPrice, entryPrice, rangeMin, rangeMax, initialUSD, feesPerDay, days) {
   const sqrtEntry = Math.sqrt(entryPrice), sqrtA = Math.sqrt(rangeMin), sqrtB = Math.sqrt(rangeMax);
   const { amount0: u0, amount1: u1 } = getAmountsForLiquidity(1, sqrtEntry, sqrtA, sqrtB);
-  const denomEntry = u0 + u1 / entryPrice; // valor de entrada en unidades "token0-equivalente"
+  const denomEntry = u0 * entryPrice + u1; // valor de entrada en unidades "token1-equivalente"
   if (!(denomEntry > 0)) return null;
   const Lusd = initialUSD / denomEntry; // liquidez escalada para que el valor de entrada cuadre con initialUSD
   const sqrtSim = Math.sqrt(simPrice);
   const { amount0: xSim, amount1: ySim } = getAmountsForLiquidity(Lusd, sqrtSim, sqrtA, sqrtB);
-  const positionValueEstimate = xSim + ySim / simPrice;
+  const positionValueEstimate = xSim * simPrice + ySim;
   const feesEstimate = feesPerDay * days;
   const totalValueEstimate = positionValueEstimate + feesEstimate;
   return {
