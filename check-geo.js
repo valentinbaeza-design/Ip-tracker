@@ -21,14 +21,29 @@ const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const GEO_LOG_FILE = "geo-log.json";
 const MAX_ENTRIES_PER_INSTRUMENT = 60; // ~2 meses a razón de 1 entrada/día
 
+// Fase 3: un fallo de Telegram ya no pasa desapercibido — sendTelegram devuelve
+// true/false y main() marca el proceso como fallido al final si alguno falló
+// (después de guardar geo-log.json, que no se debe perder).
+let anyTelegramFailed = false;
 async function sendTelegram(text) {
-  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text, parse_mode: "HTML" })
-  });
-  if (!res.ok) console.error("Error enviando a Telegram:", await res.text());
+  try {
+    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text, parse_mode: "HTML" })
+    });
+    if (!res.ok) {
+      console.error("Error enviando a Telegram:", await res.text());
+      anyTelegramFailed = true;
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error("Error de red enviando a Telegram:", e.message);
+    anyTelegramFailed = true;
+    return false;
+  }
 }
 
 function loadGeoLog() {
@@ -131,6 +146,11 @@ async function main() {
   }
 
   saveGeoLog(log);
+
+  if (anyTelegramFailed) {
+    console.error("Al menos un mensaje de Telegram no se pudo enviar. Marcando la ejecución como fallida.");
+    process.exitCode = 1;
+  }
 }
 
 main().catch(e => {
