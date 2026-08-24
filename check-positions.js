@@ -579,13 +579,27 @@ function buildPositionMessage(r, now, positionHistory, mc) {
   return msg;
 }
 
+// Fase 3: un fallo de Telegram ya no pasa desapercibido. sendTelegram devuelve
+// true/false; main() lleva la cuenta y marca el proceso como fallido al final
+// (después de guardar history.json, que es lo importante que no se debe perder)
+// para que la ejecución aparezca en rojo en GitHub Actions en vez de en verde
+// como si todo hubiera ido bien.
 async function sendTelegram(text) {
-  const res = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: TG_CHAT, text, parse_mode: "Markdown" })
-  });
-  if (!res.ok) console.error("Error enviando a Telegram:", await res.text());
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: TG_CHAT, text, parse_mode: "Markdown" })
+    });
+    if (!res.ok) {
+      console.error("Error enviando a Telegram:", await res.text());
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error("Error de red enviando a Telegram:", e.message);
+    return false;
+  }
 }
 
 async function main() {
@@ -672,14 +686,23 @@ async function main() {
   const cfgByTokenId = {};
   POSITIONS.forEach(cfg => { cfgByTokenId[String(cfg.tokenId)] = cfg; });
 
+  let anyTelegramFailed = false;
   for (const r of results) {
     let mc = null;
     if (!r.error) {
       const cfg = cfgByTokenId[r.tokenId];
       if (cfg) mc = await computeMonteCarloScenarios(cfg, r);
     }
-    await sendTelegram(buildPositionMessage(r, now, history.positions[r.tokenId] || [], mc));
+    const ok = await sendTelegram(buildPositionMessage(r, now, history.positions[r.tokenId] || [], mc));
+    if (!ok) anyTelegramFailed = true;
     await new Promise(resolve => setTimeout(resolve, 500)); // pequeña pausa entre mensajes
+  }
+
+  if (anyTelegramFailed) {
+    // history.json ya se guardó arriba, así que no se pierde nada — pero la ejecución
+    // debe quedar marcada como fallida para que se note en GitHub Actions.
+    console.error("Al menos un mensaje de Telegram no se pudo enviar. Marcando la ejecución como fallida.");
+    process.exitCode = 1;
   }
 }
 
