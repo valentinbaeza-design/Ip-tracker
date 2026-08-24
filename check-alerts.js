@@ -17,15 +17,27 @@ const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 const APININJAS_KEY = process.env.APININJAS_KEY;
 const ALPHAVANTAGE_KEY = process.env.ALPHAVANTAGE_KEY;
 
+// Fase 3: un fallo de Telegram ya no pasa desapercibido — sendTelegram devuelve
+// true/false y main() marca el proceso como fallido al final si alguno falló.
+let anyTelegramFailed = false;
 async function sendTelegram(text) {
-  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text, parse_mode: "HTML" })
-  });
-  if (!res.ok) {
-    console.error("Error enviando a Telegram:", await res.text());
+  try {
+    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text, parse_mode: "HTML" })
+    });
+    if (!res.ok) {
+      console.error("Error enviando a Telegram:", await res.text());
+      anyTelegramFailed = true;
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error("Error de red enviando a Telegram:", e.message);
+    anyTelegramFailed = true;
+    return false;
   }
 }
 
@@ -226,6 +238,11 @@ async function main() {
   }
 
   await checkCalibrations();
+
+  if (anyTelegramFailed) {
+    console.error("Al menos un mensaje de Telegram no se pudo enviar. Marcando la ejecución como fallida.");
+    process.exitCode = 1;
+  }
 }
 
 main().catch(e => {
