@@ -32,10 +32,8 @@ test("estimatePositionValueV2: precio simulado por encima del rango => 100% toke
   const bienPorEncima = estimatePositionValueV2(rangeMax * 3, entryPrice, rangeMin, rangeMax, initialUSD, 0, 0);
   // Una vez fuera del rango por arriba, todo es token1; más subida de precio no cambia
   // la cantidad de token1 que tienes (solo cambiaría si volviera a entrar en rango).
-  // El valor en USD sí puede diferir porque valueUSD = ySim/simPrice según la convención
-  // interna (token0-equivalente) — lo que debe mantenerse constante es la CANTIDAD de
-  // token1, no el valor en esta unidad interna. Verificamos vía getAmountsForLiquidity
-  // directamente para aislar la composición de la conversión a USD.
+  // Verificamos vía getAmountsForLiquidity directamente para aislar la composición de
+  // la conversión a USD.
   const sqrtA = Math.sqrt(rangeMin), sqrtB = Math.sqrt(rangeMax);
   const { amount1: y1 } = getAmountsForLiquidity(1, Math.sqrt(rangeMax), sqrtA, sqrtB);
   const { amount1: y2 } = getAmountsForLiquidity(1, Math.sqrt(rangeMax * 3), sqrtA, sqrtB);
@@ -69,6 +67,36 @@ test("estimatePositionValueV2: entryPrice fuera del propio rango no revienta ni 
   // válido y no null, sencillamente con toda la liquidez del lado token0 desde el principio.
   const r = estimatePositionValueV2(1500, 500, 1000, 4000, 100, 0, 0);
   assert.ok(r !== null, "no debería devolver null en este caso límite, es una entrada matemáticamente válida");
+});
+
+// --- Caso 7 (REGRESIÓN — el bug real detectado por Valen el 24/8: "por qué el pesimista
+// sale mejor que el optimista"): el valor de la posición debe SUBIR cuando el precio
+// simulado sube respecto a la entrada, y BAJAR cuando baja — no al revés. La primera
+// versión de esta función tenía la conversión de unidades invertida y hacía justo lo
+// contrario, silenciosamente, sin que ningún test anterior lo detectara. ---
+test("estimatePositionValueV2 (REGRESIÓN): el valor sube cuando el precio sube, baja cuando baja", () => {
+  const entryPrice = 2274, rangeMin = 1935.31, rangeMax = 2724.41, initialUSD = 69.84;
+  const valEntrada = estimatePositionValueV2(entryPrice, entryPrice, rangeMin, rangeMax, initialUSD, 0, 0);
+  const valSubida = estimatePositionValueV2(2600, entryPrice, rangeMin, rangeMax, initialUSD, 0, 0);
+  const valBajada = estimatePositionValueV2(2000, entryPrice, rangeMin, rangeMax, initialUSD, 0, 0);
+  assert.ok(valSubida.valueUSD > valEntrada.valueUSD,
+    `si el precio SUBE, el valor debería ser MAYOR que en la entrada: ${valSubida.valueUSD} vs ${valEntrada.valueUSD}`);
+  assert.ok(valBajada.valueUSD < valEntrada.valueUSD,
+    `si el precio BAJA, el valor debería ser MENOR que en la entrada: ${valBajada.valueUSD} vs ${valEntrada.valueUSD}`);
+  assert.ok(valSubida.valueUSD > valBajada.valueUSD,
+    "el escenario de precio más alto debe dar más valor que el de precio más bajo");
+});
+
+// --- Caso 8 (REGRESIÓN, monotonía completa): el valor debe crecer de forma monótona con
+// el precio simulado (dentro del rango) — ninguna inversión de pendiente en ningún tramo ---
+test("estimatePositionValueV2 (REGRESIÓN): monotonía completa dentro del rango", () => {
+  const entryPrice = 2274, rangeMin = 1935.31, rangeMax = 2724.41, initialUSD = 69.84;
+  const precios = [1950, 2050, 2150, 2274, 2400, 2500, 2600, 2700];
+  const valores = precios.map(p => estimatePositionValueV2(p, entryPrice, rangeMin, rangeMax, initialUSD, 0, 0).valueUSD);
+  for (let i = 1; i < valores.length; i++) {
+    assert.ok(valores[i] > valores[i - 1],
+      `el valor debe crecer monótonamente con el precio: precio ${precios[i]} dio ${valores[i].toFixed(2)}, precio ${precios[i - 1]} dio ${valores[i - 1].toFixed(2)}`);
+  }
 });
 
 console.log(`\n${pass} pasadas, ${fail} fallidas`);
