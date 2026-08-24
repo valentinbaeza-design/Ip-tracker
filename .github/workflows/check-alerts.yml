@@ -5,9 +5,14 @@ on:
     - cron: "0 */4 * * *"   # cada 4 horas, mismo ritmo que el bot de Pools
   workflow_dispatch: {}      # permite lanzarlo a mano desde la pestaña Actions
 
+concurrency:
+  group: check-alerts
+  cancel-in-progress: false
+
 jobs:
   check-alerts:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
