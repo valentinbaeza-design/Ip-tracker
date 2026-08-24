@@ -1,0 +1,82 @@
+--- /mnt/user-data/outputs/panel-lp.html	2026-08-24 12:02:17.985501000 +0000
++++ panel-lp.html	2026-08-24 19:53:49.133242694 +0000
+@@ -285,6 +285,25 @@
+   };
+ }
+ // === CONFIG_ROUNDTRIP_END ===
++
++// === CARTERA_AGGREGATION_START ===
++// Auditoría del 24/8: mismo bug de Fase 1 (una suma parcial presentada como si fuera
++// completa) encontrado en la pestaña Cartera. Si algunos holdings de una clase (o de la
++// cartera entera) no tienen precio en vivo disponible todavía, la suma de los que SÍ lo
++// tienen se mostraba tal cual, sin ningún aviso — indistinguible de un total real.
++// Esta función agrega el valor y devuelve explícitamente si el resultado es parcial,
++// vacío (sin holdings) o totalmente desconocido (hay holdings pero ninguno con precio).
++function aggregateHoldingsCurrentValue(holdingsSubset){
++  const withValue = holdingsSubset.filter(h => h.current != null);
++  const total = holdingsSubset.length;
++  const known = withValue.length;
++  const isEmpty = total === 0;
++  const isFullyUnknown = total > 0 && known === 0;
++  const isPartial = known > 0 && known < total;
++  const sum = known > 0 ? withValue.reduce((a, h) => a + h.current, 0) : (isEmpty ? 0 : null);
++  return { sum, isPartial, isEmpty, isFullyUnknown, total, known };
++}
++// === CARTERA_AGGREGATION_END ===
+ // Lee config.json del repo (API de contenidos de GitHub; usa el token si está desbloqueado
+ // para mayor límite de peticiones, pero funciona sin él porque el repo es público).
+ async function fetchPositionsConfig(){
+@@ -1674,8 +1693,8 @@
+     return { ...h, idx, current, gain, gainPct };
+   });
+   const totalInvested = holdings.reduce((a, h) => a + (Number(h.investedEUR) || 0), 0);
+-  const holdingsWithValue = holdings.filter(h => h.current != null);
+-  const totalCurrent = holdingsWithValue.length ? holdingsWithValue.reduce((a, h) => a + h.current, 0) : null;
++  const totalAgg = aggregateHoldingsCurrentValue(holdings);
++  const totalCurrent = totalAgg.sum;
+ 
+   const holdingRows = holdings.map(h => `
+     <tr>
+@@ -1692,12 +1711,15 @@
+   const deviationRows = ASSET_CLASSES.map(c => {
+     const classHoldings = holdings.filter(h => h.assetKey === c.key);
+     const classInvested = classHoldings.reduce((a, h) => a + (Number(h.investedEUR) || 0), 0);
+-    const classWithValue = classHoldings.filter(h => h.current != null);
+-    const classCurrent = classWithValue.length ? classWithValue.reduce((a, h) => a + h.current, 0) : (classHoldings.length ? null : 0);
++    const classAgg = aggregateHoldingsCurrentValue(classHoldings);
++    const classCurrent = classAgg.sum;
+     const targetPct = Number(state.portfolio.allocations[c.key]) || 0;
+     const actualPct = (totalCurrent != null && totalCurrent > 0 && classCurrent != null) ? (classCurrent / totalCurrent) * 100 : null;
+     const diff = actualPct != null ? actualPct - targetPct : null;
+-    return { label: c.label, targetPct, actualPct, classInvested, classCurrent, diff };
++    // Parcial si esta clase o el total general se calcularon con datos incompletos —
++    // en cualquiera de los dos casos, el % mostrado no es del todo fiable.
++    const isPartial = classAgg.isPartial || totalAgg.isPartial;
++    return { label: c.label, targetPct, actualPct, classInvested, classCurrent, diff, isPartial };
+   });
+ 
+   const newForm = state.newHoldingForm;
+@@ -1741,10 +1763,11 @@
+           <tbody>${holdingRows}</tbody>
+         </table>
+       </div>
+-      <p class="muted" style="font-size:11px;margin-top:6px">Total invertido: ${fmtE(totalInvested)} · Valor actual conocido: ${totalCurrent != null ? fmtE(totalCurrent) : "incompleto (hay holdings manuales sin actualizar)"}</p>
++      <p class="muted" style="font-size:11px;margin-top:6px">Total invertido: ${fmtE(totalInvested)} · Valor actual conocido: ${totalCurrent != null ? fmtE(totalCurrent) + (totalAgg.isPartial ? ` <span style="color:var(--coral)">(parcial — ${totalAgg.known}/${totalAgg.total} holdings con precio)</span>` : "") : "incompleto (hay holdings manuales sin actualizar)"}</p>
+       ` : `<p class="muted" style="margin-top:12px">Todavía no hay compras registradas.</p>`}
+     </div>`;
+ 
++  const anyPartial = deviationRows.some(d => d.isPartial && d.actualPct != null);
+   const deviation = `
+     <div class="card">
+       <h2>¿Sigo el reparto objetivo?</h2>
+@@ -1752,8 +1775,9 @@
+       ${deviationRows.map(d => `
+         <div class="row">
+           <span class="l">${d.label}</span>
+-          <span class="r">${d.actualPct != null ? d.actualPct.toFixed(1) + "%" : "—"} <span class="muted">/ obj. ${d.targetPct}%</span>${d.diff != null ? ` <span style="color:${Math.abs(d.diff) > 5 ? 'var(--coral)' : 'var(--muted)'}">(${d.diff >= 0 ? "+" : ""}${d.diff.toFixed(1)}pp)</span>` : ""}</span>
++          <span class="r">${d.actualPct != null ? (d.isPartial ? "~" : "") + d.actualPct.toFixed(1) + "%" : "—"} <span class="muted">/ obj. ${d.targetPct}%</span>${d.diff != null ? ` <span style="color:${Math.abs(d.diff) > 5 ? 'var(--coral)' : 'var(--muted)'}">(${d.diff >= 0 ? "+" : ""}${d.diff.toFixed(1)}pp)</span>` : ""}</span>
+         </div>`).join("")}
++      ${anyPartial ? `<p class="muted" style="font-size:11px;margin-top:6px;color:var(--coral)">~ = calculado con datos parciales (algún holding sin precio en vivo todavía) — el % real puede diferir.</p>` : ""}
+       <p class="muted" style="font-size:11px;margin-top:8px">Desviaciones de más de ±5 puntos porcentuales suelen ser la señal habitual para plantearse rebalancear. No es una regla automática, solo una referencia.</p>
+     </div>`;
+ 
