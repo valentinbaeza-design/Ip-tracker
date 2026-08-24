@@ -5,9 +5,16 @@ on:
     - cron: "*/15 * * * *"   # cada 15 min — usa API Ninjas, no oilpriceapi (cuota insuficiente a esta cadencia)
   workflow_dispatch: {}
 
+concurrency:
+  group: check-trigger
+  cancel-in-progress: false
+
 jobs:
   check-trigger:
     runs-on: ubuntu-latest
+    # Más corto que los demás: corre cada 15 min, así que un job colgado no puede
+    # quedarse ocupando el hueco de la siguiente ejecución durante horas.
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
