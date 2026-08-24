@@ -509,6 +509,36 @@ function buildSuggestion(r, positionHistory) {
   return { text: msgs.join(" "), action };
 }
 
+// ---------- Lectura coloquial del Montecarlo ----------
+// Traduce los tres percentiles del escenario neutro a una frase en lenguaje llano,
+// con las cifras reales de la posición (no la referencia de 1000€, que es solo para
+// comparar posiciones entre sí). Detecta además el "efecto suelo/techo": cuando el
+// percentil 10 (o 90) coincide entre el escenario neutro y el de tendencia, es porque
+// el precio simulado ya salió del rango en ambos casos — la posición se queda fija en
+// un solo token y deja de perder (o ganar) más por este mecanismo, así que el resultado
+// converge. Vale la pena explicarlo, porque si no parece una casualidad rara.
+export function buildColloquialMcSummary(mc, initialUSD) {
+  const p10 = mc.neutro.valorP10.returnPct;
+  const p50 = mc.neutro.valorP50.returnPct;
+  const p90 = mc.neutro.valorP90.returnPct;
+  const dollarAt = (pct) => initialUSD * (1 + pct / 100);
+  const fmtPct = (p) => `${p >= 0 ? "+" : ""}${p.toFixed(1)}%`;
+  const fmtDollar = (p) => `$${dollarAt(p).toFixed(2)}`;
+
+  const FLOOR_MATCH_THRESHOLD_PCT = 0.5; // diferencia máxima para considerar que es el mismo "suelo"
+  const tendP10 = mc.tendencia.valorP10.returnPct;
+  const tendP90 = mc.tendencia.valorP90.returnPct;
+  let floorNote = "";
+  if (Math.abs(p10 - tendP10) < FLOOR_MATCH_THRESHOLD_PCT) {
+    floorNote = " Ese peor caso es el mismo tanto si el precio se mueve errático como si sigue la racha actual — no es casualidad: en ese punto la posición ya salió del rango y se queda fija en un solo token, así que hay un límite real a partir de ahí, no una caída sin fondo.";
+  } else if (Math.abs(p90 - tendP90) < FLOOR_MATCH_THRESHOLD_PCT) {
+    floorNote = " Ese mejor caso es el mismo en los dos escenarios por el mismo motivo: la posición ya salió del rango por arriba y se queda fija, así que a partir de ahí no sigue ganando más por este mecanismo.";
+  }
+
+  const direction = (pct) => pct >= 0 ? "ganar" : "perder";
+  return `🗣️ *En plata:* con lo que tienes puesto (${initialUSD.toFixed(2)}$), en el peor de los casos razonables no deberías bajar de ${fmtDollar(p10)} (${direction(p10)} ${Math.abs(p10).toFixed(1)}% aprox.).${floorNote} Lo más probable es acabar cerca de ${fmtDollar(p50)} (${fmtPct(p50)}), y en un escenario favorable, ${fmtDollar(p90)} (${fmtPct(p90)}).`;
+}
+
 function buildPositionMessage(r, now, positionHistory, mc) {
   if (r.error) return `⚠️ *${r.label}*\n${now}\nError leyendo datos: ${r.error}`;
 
@@ -569,6 +599,7 @@ function buildPositionMessage(r, now, positionHistory, mc) {
     msg += `\nSi la tendencia reciente continuara (apuesta direccional, no neutral): tocar máx ${(mc.tendencia.pTocaArriba * 100).toFixed(1)}% · tocar mín ${(mc.tendencia.pTocaAbajo * 100).toFixed(1)}%`;
     msg += `\n  Con ${REF_AMOUNT}€ en vez de $${r.initialUSD.toFixed(2)} — pesimista ${fmtValScaled(mc.tendencia.valorP10)} · mediana ${fmtValScaled(mc.tendencia.valorP50)} · optimista ${fmtValScaled(mc.tendencia.valorP90)}`;
     msg += `\n_(El % es el mismo con $${r.initialUSD.toFixed(2)} o con ${REF_AMOUNT}€ — solo cambia la cifra en dinero. Calculado con el movimiento de precio simulado + impermanent loss + fees a tu ritmo actual de $${mc.feesPerDay.toFixed(5)}/día. No es una garantía.)_`;
+    msg += `\n\n${buildColloquialMcSummary(mc, r.initialUSD)}`;
   }
 
   msg += `\n👉 ${r.suggestion.text}`;
