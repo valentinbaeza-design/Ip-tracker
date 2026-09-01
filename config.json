@@ -14,9 +14,7 @@
       "rangeMin": 1935.31,
       "rangeMax": 2724.41,
       "priceMode": "direct",
-      "priceSymbols": [
-        "ETHUSDT"
-      ],
+      "priceSymbols": ["ETHUSDT"],
       "analysisSymbol": "ETHUSDT",
       "entryPrice": 2274
     },
@@ -34,32 +32,27 @@
       "rangeMin": 11962,
       "rangeMax": 47832,
       "priceMode": "ratio",
-      "priceSymbols": [
-        "ETHUSDT",
-        "ARBUSDT"
-      ],
+      "priceSymbols": ["ETHUSDT", "ARBUSDT"],
       "analysisSymbol": "ARBUSDT",
       "entryPrice": 23952.1
     },
     {
-      "label": "WETH/ARB · Arbitrum",
-      "tokenId": 5670128,
+      "label": "WBTC/WETH · Arbitrum",
+      "tokenId": 5678368,
       "rpc": "https://arb1.arbitrum.io/rpc",
       "positionManager": "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
       "factory": "0x1F98431c8aD98523631AE4a59f267346ea31F984",
       "chainSlug": "arbitrum",
-      "initialUSD": 141.1,
-      "openedAt": "2026-08-24T13:24:32.277Z",
-      "feeTierLabel": "0.3%",
-      "rangeMin": 22731.307,
-      "rangeMax": 27707.335,
+      "initialUSD": 178.05,
+      "openedAt": "2026-09-01T00:00:00.000Z",
+      "note": "Precio de entrada real, visto en pantalla en Uniswap justo antes de confirmar la creación de esta posición (31,7748 WETH/WBTC). Fecha aproximada al día, hora no verificada con exactitud.",
+      "feeTierLabel": "0.05%",
+      "rangeMin": 24.7998,
+      "rangeMax": 38.8153,
       "priceMode": "ratio",
-      "priceSymbols": [
-        "ETHUSDT",
-        "ARBUSDT"
-      ],
-      "analysisSymbol": "ARBUSDT",
-      "entryPrice": 25192.83
+      "priceSymbols": ["BTCUSDT", "ETHUSDT"],
+      "analysisSymbol": "BTCUSDT",
+      "entryPrice": 31.7748
     }
   ]
 }
