@@ -54,5 +54,17 @@
       "analysisSymbol": "BTCUSDT",
       "entryPrice": 31.7748
     }
+  ],
+  "reserves": [
+    {
+      "label": "ARB reserva (post-cierre #5670128)",
+      "tokenAddress": "0x912CE59144191C1204E64559FE8253a0e49E6548",
+      "rpc": "https://arb1.arbitrum.io/rpc",
+      "chainSlug": "arbitrum",
+      "initialAmount": 294.784,
+      "initialUSD": 33.33,
+      "setAsideAt": "2026-09-01T00:00:00.000Z",
+      "note": "Reserva mantenida sin tocar como filtro para el desbloqueo de ARB del 16/9."
+    }
   ]
 }
