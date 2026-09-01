@@ -82,8 +82,18 @@ export function approxHoldValueUsd50_50(priceNow, entryApprox, initialUSD) {
 }
 // ---------- Fin Fase 2 ----------
 
-// Mapa símbolo -> id de CoinGecko, compartido con getUsdPrices (mismo criterio, una sola fuente).
-const CG_ID_BY_SYMBOL = { WETH: "ethereum", ETH: "ethereum", USDC: "usd-coin", ARB: "arbitrum" };
+// Mapa símbolo -> id de CoinGecko. ÚNICA fuente: tanto getUsdPrices() (precio actual) como
+// fetchHistoricalUsdPrice() (precio en una fecha pasada) leen de aquí. Antes había dos mapas
+// idénticos mantenidos a mano por separado (uno dentro de getUsdPrices, otro aquí) — el
+// comentario decía "compartido" pero no lo era, así que añadir un token nuevo en un sitio
+// sin acordarse del otro rompía silenciosamente vs Hold o el valor en USD según cuál te
+// olvidaras. Unificado para que solo haga falta tocar un sitio.
+const CG_ID_BY_SYMBOL = {
+  WETH: "ethereum", ETH: "ethereum",
+  USDC: "usd-coin",
+  ARB: "arbitrum",
+  WBTC: "wrapped-bitcoin", BTC: "bitcoin"
+};
 const STABLECOIN_SYMBOLS = new Set(["USDC", "USDT", "DAI", "USD₮0"]); // precio ~1 USD, no hace falta histórico
 
 // Precio absoluto en USD de un símbolo en una fecha concreta, vía el endpoint /history de
@@ -113,13 +123,12 @@ export async function fetchHistoricalUsdPrice(symbol, dateIso) {
 }
 
 async function getUsdPrices(symbols) {
-  const map = { WETH: "ethereum", ETH: "ethereum", USDC: "usd-coin", ARB: "arbitrum" };
-  const ids = [...new Set(symbols.map(s => map[s]).filter(Boolean))];
+  const ids = [...new Set(symbols.map(s => CG_ID_BY_SYMBOL[s]).filter(Boolean))];
   try {
     const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids.join(",")}&vs_currencies=usd`);
     const data = await res.json();
     const out = {};
-    for (const s of symbols) out[s] = map[s] && data[map[s]] ? data[map[s]].usd : null;
+    for (const s of symbols) out[s] = CG_ID_BY_SYMBOL[s] && data[CG_ID_BY_SYMBOL[s]] ? data[CG_ID_BY_SYMBOL[s]].usd : null;
     return out;
   } catch (e) {
     console.error("Error obteniendo precios USD:", e.message);
@@ -152,10 +161,9 @@ async function fetchBinanceDailyCloses(symbol, limit) {
 
 // Respaldo si Binance (cualquiera de los dos dominios) fallara: CoinGecko, con el mismo
 // símbolo traducido a su id de moneda.
-const COINGECKO_ID_BY_BASE = { ETH: "ethereum", WETH: "ethereum", ARB: "arbitrum", BTC: "bitcoin", USDC: "usd-coin" };
 function binanceSymbolToCoinGeckoId(symbol) {
   const base = symbol.replace(/USDT$|USDC$|BUSD$/, "");
-  return COINGECKO_ID_BY_BASE[base] || null;
+  return CG_ID_BY_SYMBOL[base] || null;
 }
 async function fetchCoinGeckoDailyCloses(symbol, days) {
   const id = binanceSymbolToCoinGeckoId(symbol);
