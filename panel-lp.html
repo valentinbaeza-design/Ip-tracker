@@ -132,7 +132,9 @@ const DEFAULT_RPCS = {
   base: "https://mainnet.base.org"
 };
 const NETWORKS = {
-  ethereum: { label: "Ethereum", nativeSymbol: "ETH", coingeckoId: "ethereum", tokens: [] },
+  ethereum: { label: "Ethereum", nativeSymbol: "ETH", coingeckoId: "ethereum", tokens: [
+    { symbol: "MATIC", address: "0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0", decimals: 18, cg: "matic-network" }
+  ]},
   polygon: { label: "Polygon", nativeSymbol: "POL", coingeckoId: "matic-network", tokens: [
     { symbol: "USDT", address: "0xc2132D05D31c914a87C6611C10748AEb04B58e8F", decimals: 6, cg: "tether" },
     { symbol: "WETH", address: "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619", decimals: 18, cg: "weth" }
