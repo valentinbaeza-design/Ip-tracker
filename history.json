@@ -2,16 +2,6 @@
   "positions": {
     "5642782": [
       {
-        "t": "2026-08-13T13:12:54Z",
-        "inRange": true,
-        "distToLower": 37,
-        "distToUpper": 63,
-        "totalReturnPct": -1.7,
-        "priceNow": 25242.723,
-        "vsHoldUSD": -0.1366588437757028,
-        "entryPriceUsed": true
-      },
-      {
         "t": "2026-08-13T17:32:36Z",
         "inRange": true,
         "distToLower": 36.5,
@@ -2588,6 +2578,20 @@
         "vsHoldUSD": 0.07396473480659882,
         "entryPriceUsed": true,
         "vsHoldApprox": false
+      },
+      {
+        "t": "2026-09-14T09:18:33.318Z",
+        "inRange": true,
+        "distToLower": 18.3,
+        "distToUpper": 81.7,
+        "totalReturnPct": 56.53911444440124,
+        "priceNow": 18529.302052449846,
+        "positionValueUSD": 4.6760374087186225,
+        "feesValueUSD": 0.19232905050225568,
+        "ilPct": -2.2940095807353647,
+        "vsHoldUSD": 0.08254177369919002,
+        "entryPriceUsed": true,
+        "vsHoldApprox": false
       }
     ],
     "5670125": [
@@ -4240,6 +4244,20 @@
         "feesValueUSD": 0.21921284799741664,
         "ilPct": 0.7142323117463408,
         "vsHoldUSD": 1.4834621445988887,
+        "entryPriceUsed": true,
+        "vsHoldApprox": false
+      },
+      {
+        "t": "2026-09-14T09:18:33.318Z",
+        "inRange": true,
+        "distToLower": 43.3,
+        "distToUpper": 56.7,
+        "totalReturnPct": 1.4082288391453632,
+        "priceNow": 30.87128019698454,
+        "positionValueUSD": 180.33243980419536,
+        "feesValueUSD": 0.22491164390295776,
+        "ilPct": 0.7103864493690191,
+        "vsHoldUSD": 1.4969325956144246,
         "entryPriceUsed": true,
         "vsHoldApprox": false
       }
@@ -6868,6 +6886,20 @@
         "feesValueUSD": 1.6587890333458115,
         "ilPct": -2.3380874617688594,
         "vsHoldUSD": -0.07059342745839103,
+        "entryPriceUsed": true,
+        "vsHoldApprox": false
+      },
+      {
+        "t": "2026-09-14T09:18:33.318Z",
+        "inRange": true,
+        "distToLower": 73.9,
+        "distToUpper": 26.1,
+        "totalReturnPct": 6.154830242780875,
+        "priceNow": 2518.480644767146,
+        "positionValueUSD": 72.45721789633885,
+        "feesValueUSD": 1.6813155452193147,
+        "ilPct": -2.6729248618115924,
+        "vsHoldUSD": -0.3086004042514787,
         "entryPriceUsed": true,
         "vsHoldApprox": false
       }
