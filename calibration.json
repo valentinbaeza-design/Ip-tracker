@@ -3,15 +3,8 @@
     {
       "instrument": "NATGAS",
       "proxySymbol": "UNG",
-      "ratio": 0.2828828828828829,
-      "calibratedAt": "2026-08-24T10:23:07.503Z",
-      "maxDaysBeforeReminder": 14
-    },
-    {
-      "instrument": "ORO",
-      "proxySymbol": "GLD",
-      "ratio": 10.889715832205685,
-      "calibratedAt": "2026-08-20T16:31:59.467Z",
+      "ratio": 0.28972142170989434,
+      "calibratedAt": "2026-09-20T10:06:45.394Z",
       "maxDaysBeforeReminder": 14
     }
   ]
