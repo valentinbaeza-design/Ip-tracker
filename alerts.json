@@ -1,17 +1,17 @@
 {
   "alerts": [
     {
-      "id": 1789905139000,
+      "id": 1789899289795,
       "instrument": "NATGAS",
       "priceCode": "NATURAL_GAS_USD",
       "proxySymbol": "UNG",
       "direction": "COMPRAR",
       "triggerPrice": 2.95,
       "precioSL": 2.803,
-      "precioTP": 3.20,
+      "precioTP": 3.2,
       "apalancamiento": 10,
       "invertido": 98,
-      "note": "Orden límite ya colocada en eToro (X10, €98). SL/TP ya fijados en la propia orden de eToro (2.803 / 3.200) — esta entrada en el panel es solo aviso paralelo, no dispara nada por sí sola. Verificar desfase API Ninjas vs precio eToro antes de fiarse del aviso."
+      "note": ""
     }
   ]
 }
