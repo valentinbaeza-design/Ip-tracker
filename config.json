@@ -40,6 +40,25 @@
       ],
       "analysisSymbol": "ARBUSDT",
       "entryPrice": 12067.9
+    },
+    {
+      "label": "WETH/USDC · Base",
+      "tokenId": 6062599,
+      "rpc": "https://mainnet.base.org",
+      "positionManager": "0x03a520b32C04BF3bEEf7BEb72E919cf822Ed34f1",
+      "factory": "0x33128a8fC17869897dcE68Ed026d694621f6FDfD",
+      "chainSlug": "base",
+      "initialUSD": 70.72,
+      "openedAt": "2026-09-21T10:59:40.394Z",
+      "feeTierLabel": "0.3%",
+      "rangeMin": 2042.69,
+      "rangeMax": 3127.53,
+      "priceMode": "direct",
+      "priceSymbols": [
+        "ETHUSDT"
+      ],
+      "analysisSymbol": "ETHUSDT",
+      "entryPrice": 2719.4
     }
   ]
 }
