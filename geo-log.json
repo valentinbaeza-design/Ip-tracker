@@ -35,6 +35,13 @@
         "content": "- [Mar 2026] Inicio guerra EEUU-Israel-Irán → pico de precios fósiles globales; cierre casi total del Estrecho de Ormuz, calificado por AIE como mayor disrupción histórica\n- [Mar–Sep 2026] Qatar en force majeure: capacidad LNG reducida ~17%, cargamentos retenidos hasta septiembre\n- [2026 YTD] TTF europeo +146% interanual; precio ~€79/MWh en sep 2026, máximo desde dic 2022\n- [Sep 2026] Almacenamiento europeo ~68%, mínimo de dos décadas; objetivo UE era 80% para diciembre\n- [Sep 2026] Producción gas EE.UU. en récord histórico: 113,1 bcfd (Lower 48)\n- [11 sep 2026] EIA: build semanal muy por debajo del promedio; superávit quinquenal se reduce a 118 Bcf\n- [6 oct 2026] Próximo STEO de la EIA (fecha confirmada)\n- [31 oct 2026] Fin temporada inyección EE.UU.; EIA proyecta 3.969 Bcf (+5% sobre promedio quinquenal)\n- [Nov 2027] Fecha límite UE para eliminar importaciones de gas ruso",
         "auto": true,
         "source": "github-actions"
+      },
+      {
+        "id": "1790003118336-geo",
+        "savedAt": "2026-09-21T15:05:18.336Z",
+        "content": "- [2 feb 2026] Reglamento (UE) 2026/261 en vigor: prohíbe LNG ruso (contratos corto plazo desde 25 abr 2026, largo plazo desde 1 ene 2027); gas tubería ruso desde 30 sep 2027\n- [17 jun 2026] Prohibición efectiva del gas de tubería ruso bajo contratos a corto plazo en la UE\n- [Sep 2026] Producción US Lower 48 en récord: 113.1 bcfd promedio (récord mensual previo: 112.2 bcfd en agosto)\n- [11 sep 2026] Cierre East-West Crude Oil Pipeline: disrupción del 39% del comercio global y 31% de envíos mundiales\n- [10 sep 2026] TTF alcanza máximo desde finales de 2022 por tensiones en Oriente Medio (conflicto Irán)\n- [Sep 2026] Almacenamiento UE ~68%, muy por debajo del objetivo legal del 83-90% para 1 noviembre\n- [Sep 2026] Qatar: fuerza mayor por conflicto, -17% capacidad exportación LNG, cargamentos retenidos durante septiembre\n- [Ene 2026] EE.UU. suministra el 60% del LNG importado por la UE (5.36 Mt), récord\n- [6 oct 2026] Próximo STEO de EIA (fecha confirmada)\n- [1 ene 2027] Prohibición LNG ruso (contratos largo plazo) entra en vigor en la UE",
+        "auto": true,
+        "source": "github-actions"
       }
     ]
   }
