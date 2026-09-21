@@ -10,6 +10,17 @@
       "finalUSD": 75.49,
       "feesUSD": 2.2988924296931295,
       "note": "Registrado desde el botón Eliminar de Posiciones"
+    },
+    {
+      "pair": "WETH/ARB",
+      "network": "Arbitrum",
+      "tokenId": "209302",
+      "openedAt": "2023-09-21T00:00:00.000Z",
+      "closedAt": null,
+      "initialUSD": 78.69,
+      "finalUSD": 80.28,
+      "feesUSD": null,
+      "note": "Cerrada por incompatibilidad v4 con el bot, reabierta como v3 #5705325"
     }
   ]
 }
