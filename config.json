@@ -39,6 +39,26 @@
       ],
       "analysisSymbol": "ETHUSDT",
       "entryPrice": 2719.4
+    },
+    {
+      "label": "WETH/ARB · Arbitrum",
+      "tokenId": 5705325,
+      "rpc": "https://arb1.arbitrum.io/rpc",
+      "positionManager": "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
+      "factory": "0x1F98431c8aD98523631AE4a59f267346ea31F984",
+      "chainSlug": "arbitrum",
+      "initialUSD": 74.51,
+      "openedAt": "2026-09-21T11:30:56.130Z",
+      "feeTierLabel": "0.3%",
+      "rangeMin": 8246.54,
+      "rangeMax": 13568.7,
+      "priceMode": "ratio",
+      "priceSymbols": [
+        "ETHUSDT",
+        "ARBUSDT"
+      ],
+      "analysisSymbol": "ARBUSDT",
+      "entryPrice": 11784.3
     }
   ]
 }
