@@ -1,3 +1,15 @@
 {
-  "closed": []
+  "closed": [
+    {
+      "pair": "WETH/USDC",
+      "network": "Base",
+      "tokenId": "5821654",
+      "openedAt": "2026-08-20T00:00:00.000Z",
+      "closedAt": "2026-09-21T10:48:02.722Z",
+      "initialUSD": 69.84,
+      "finalUSD": 75.49,
+      "feesUSD": 2.2988924296931295,
+      "note": "Registrado desde el botón Eliminar de Posiciones"
+    }
+  ]
 }
