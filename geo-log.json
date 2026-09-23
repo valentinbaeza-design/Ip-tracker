@@ -49,6 +49,13 @@
         "content": "- [18-19 mar. 2026] Misiles iraníes dañan Ras Laffan (Qatar), eliminan ~17% capacidad LNG (~12,8 Mt/año); reparaciones estimadas 3-5 años\n- [3 mar. 2026] QatarEnergy declara force majeure en contratos LNG; cadena de extensiones hasta al menos oct. 2026\n- [28 feb. 2026] Inicio conflicto EE.UU.-Israel vs. Irán; disrupción calificada por IEA como \"la mayor en la historia del mercado global del petróleo\"\n- [25 abr. 2026] Entra en vigor ban de la UE a LNG ruso de contratos cortos\n- [17 jun. 2026] Entra en vigor ban de la UE a contratos cortos de gas ruso por tubería\n- [sep. 2026] Almacenamiento europeo ~68% capacidad, muy por debajo del objetivo UE del 80% para dic.\n- [sep. 2026] Producción NATGAS EE.UU. en récord: 113,1 bcfd; inventarios 3.298 Tcf (+3,7% sobre media 5 años)\n- [1 ene. 2027] Deadline legal UE para extinción de contratos LNG a largo plazo con Rusia\n- [otoño 2027] Ban total UE sobre gas ruso por tubería (contratos largos)",
         "auto": true,
         "source": "github-actions"
+      },
+      {
+        "id": "1790170638738-geo",
+        "savedAt": "2026-09-23T13:37:18.738Z",
+        "content": "- [28 feb 2026] Inicio conflicto EE.UU.-Israel vs. Irán; Strait of Hormuz efectivamente bloqueado\n- [2-4 mar 2026] QatarEnergy declara fuerza mayor, cierra producción LNG; Shell pierde 31% output trimestral\n- [18-19 mar 2026] Misiles iraníes golpean Ras Laffan; 17% capacidad exportadora Qatar destruida (~12,8 Mt/año); reparaciones estimadas 3-5 años\n- [Mar 2026 pico] Brent tocó ~$118; gas europeo y global con alta volatilidad en Q1 2026\n- [28 ago 2026] Qatar extiende fuerza mayor hasta oct 2026 (Pakistan) y más allá de sep (Bangladesh)\n- [sep 2026] Almacenamiento Europa ~68%, muy por debajo del objetivo UE del 80% para diciembre\n- [19 sep – ~2 oct 2026] Cove Point LNG offline por mantenimiento anual; retira ~0,85 Bcf/d feedgas de Appalachia\n- [23 sep 2026] Henry Hub en $3,02/MMBtu, máximo desde julio 2026; producción US en mínimo de 11 semanas\n- [2026, decisión UE] UE fija deadline noviembre 2027 para eliminar importaciones de gas ruso\n- [jul 2026] Shell proyecta reparación completa Qatar no antes de Q1 2027; guía Q3 asume output cero de Qatar",
+        "auto": true,
+        "source": "github-actions"
       }
     ]
   }
