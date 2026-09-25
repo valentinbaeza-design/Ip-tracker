@@ -63,6 +63,13 @@
         "content": "- [Feb-Mar 2026] Inicio guerra EE.UU./Israel-Irán; Estrecho de Ormuz cerrado el 4 Mar 2026; Brent superó $120/barril\n- [3 Mar 2026] QatarEnergy declaró fuerza mayor en todos sus contratos LNG tras ataques a Ras Laffan\n- [Mar-Sep 2026] Qatar: dos trenes de producción en Ras Laffan dañados; reparación estimada 3-5 años; pérdidas ~$24B en ventas; exportaciones cayeron hasta 96%\n- [17 Jun 2026] MOU EE.UU.-Irán para cese de operaciones militares, colapsó en julio por nuevos ataques iraníes\n- [Jul-Sep 2026] Qatar extendió fuerza mayor repetidamente; cancela cargamentos hasta oct-nov 2026 para compradores en Europa y Asia\n- [Sep 2026] Almacenamientos gas Europa ~69%, muy por debajo del promedio estacional de 85%\n- [Sep 2026] Henry Hub en ~$3.06/MMBtu; inventarios EE.UU. 3% sobre media de 5 años\n- [Sep 2026] Flujos LNG desde EE.UU. a 18 bcfd, récord mensual; EE.UU. compensa parte del déficit qatarí\n- [Oct 2026] Fin temporada inyección EE.UU. proyectada en 3,969 Bcf (EIA, STEO sep-2026)\n- [Nov 2027] Fecha límite fijada por la UE para eliminar importaciones de gas ruso por gasoducto",
         "auto": true,
         "source": "github-actions"
+      },
+      {
+        "id": "1790343811043-geo",
+        "savedAt": "2026-09-25T13:43:31.043Z",
+        "content": "- [28 Feb 2026] EE.UU. e Israel atacan Irán; comienza el cierre del Estrecho de Ormuz\n- [4 Mar 2026] IRGC declara \"control total\" del Estrecho de Ormuz; tráfico cae casi a cero\n- [Mar 2026] QatarEnergy declara fuerza mayor en todas sus exportaciones de GNL; pérdida del ~17-20% de oferta global de GNL\n- [17 Jun 2026] MOU EE.UU.–Irán para cese de hostilidades; Estrecho reabierto brevemente\n- [Jul 2026] MOU colapsa; Irán reanuda ataques a buques; Estrecho vuelve a cierre efectivo\n- [Ago 2026] Precio europeo del gas alcanza $744/mcm (+89% interanual); almacenes UE al ~69% vs objetivo 80%\n- [18 Sep 2026] EIA reporta inyección 53 Bcf; superávit EEUU baja a 95 Bcf sobre media 5 años\n- [Sep 2026] Producción EEUU roza récord: 112,8 bcfd (septiembre)\n- [Dic 2025] UE aprueba prohibición escalonada del gas ruso: GNL spot prohibido desde fin 2026, tuberías desde nov 2027\n- [6 Oct 2026] Próxima publicación EIA STEO (dato de calendario confirmado)",
+        "auto": true,
+        "source": "github-actions"
       }
     ]
   }
