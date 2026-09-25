@@ -1,16 +1,16 @@
 {
   "alerts": [
     {
-      "id": 1789899289795,
+      "id": 1790346273989,
       "instrument": "NATGAS",
       "priceCode": "NATURAL_GAS_USD",
       "proxySymbol": "UNG",
-      "direction": "COMPRAR",
-      "triggerPrice": 2.95,
-      "precioSL": 2.803,
-      "precioTP": 3.2,
-      "apalancamiento": 10,
-      "invertido": 98,
+      "direction": "CORTO",
+      "triggerPrice": 3.225,
+      "precioSL": 3.31,
+      "precioTP": 3,
+      "apalancamiento": 29,
+      "invertido": 100,
       "note": ""
     }
   ]
