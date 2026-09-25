@@ -12,6 +12,19 @@
       "apalancamiento": 29,
       "invertido": 100,
       "note": ""
+    },
+    {
+      "id": 1790346436927,
+      "instrument": "NATGAS",
+      "priceCode": "NATURAL_GAS_USD",
+      "proxySymbol": "UNG",
+      "direction": "CORTO",
+      "triggerPrice": 3.225,
+      "precioSL": 3.31,
+      "precioTP": 3,
+      "apalancamiento": 10,
+      "invertido": 100,
+      "note": ""
     }
   ]
 }
