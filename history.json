@@ -3340,20 +3340,6 @@
     ],
     "5678368": [
       {
-        "t": "2026-09-02T12:01:57.025Z",
-        "inRange": true,
-        "distToLower": 52.7,
-        "distToUpper": 47.3,
-        "totalReturnPct": -2.2981806717073026,
-        "priceNow": 32.18576336884097,
-        "positionValueUSD": 173.93703919306353,
-        "feesValueUSD": 0.02105012096163919,
-        "ilPct": 0.7852689670919497,
-        "vsHoldUSD": 1.3762815005669893,
-        "entryPriceUsed": true,
-        "vsHoldApprox": false
-      },
-      {
         "t": "2026-09-02T16:01:43.891Z",
         "inRange": true,
         "distToLower": 53.3,
@@ -6138,6 +6124,20 @@
         "vsHoldUSD": 1.6027218812042179,
         "entryPriceUsed": true,
         "vsHoldApprox": false
+      },
+      {
+        "t": "2026-10-14T22:44:45.101Z",
+        "inRange": true,
+        "distToLower": 63.5,
+        "distToUpper": 36.5,
+        "totalReturnPct": 1.1508955956287377,
+        "priceNow": 33.70081171383936,
+        "positionValueUSD": 179.3037860472242,
+        "feesValueUSD": 0.7953835607927716,
+        "ilPct": 0.35872302495493086,
+        "vsHoldUSD": 1.4362884525453126,
+        "entryPriceUsed": true,
+        "vsHoldApprox": false
       }
     ],
     "5705325": [
@@ -7482,6 +7482,20 @@
         "feesValueUSD": 0,
         "ilPct": -100,
         "vsHoldUSD": -62.871095502443865,
+        "entryPriceUsed": true,
+        "vsHoldApprox": false
+      },
+      {
+        "t": "2026-10-14T22:44:45.101Z",
+        "inRange": true,
+        "distToLower": 95.1,
+        "distToUpper": 4.9,
+        "totalReturnPct": -100,
+        "priceNow": 13305.399531724568,
+        "positionValueUSD": 0,
+        "feesValueUSD": 0,
+        "ilPct": -100,
+        "vsHoldUSD": -62.33135752091211,
         "entryPriceUsed": true,
         "vsHoldApprox": false
       }
@@ -11974,6 +11988,20 @@
         "feesValueUSD": 0.7311205920426124,
         "ilPct": -4.262607069501613,
         "vsHoldUSD": -2.256794666427723,
+        "entryPriceUsed": true,
+        "vsHoldApprox": false
+      },
+      {
+        "t": "2026-10-14T22:44:45.101Z",
+        "inRange": true,
+        "distToLower": 34.1,
+        "distToUpper": 65.9,
+        "totalReturnPct": -4.546761824575805,
+        "priceNow": 2412.9690032016374,
+        "positionValueUSD": 66.7649950220554,
+        "feesValueUSD": 0.7395350156045923,
+        "ilPct": -4.494304631838373,
+        "vsHoldUSD": -2.4022904558041063,
         "entryPriceUsed": true,
         "vsHoldApprox": false
       }
